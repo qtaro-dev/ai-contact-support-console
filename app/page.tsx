@@ -29,8 +29,8 @@ const HomePage: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">AI問い合わせ対応支援ツール</h1>
         <p className="text-gray-500">企業向けのAI問い合わせ対応支援ダッシュボード</p>
       </header>
-      <div className="flex flex-col items-center justify-center w-full max-w-4xl space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-md">
+      <div className="flex flex-col items-center justify-center w-full max-w-6xl py-12 space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-md">
           <div className="bg-white p-6 shadow-lg rounded-lg space-y-4">
             <h2 className="text-xl font-bold mb-4 text-gray-900">問い合わせ入力</h2>
             <input
@@ -56,7 +56,7 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </div>
-      <div className="w-full max-w-md">
+      <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md">
         <h2 className="text-xl font-bold mb-4 text-gray-900">問い合わせ履歴</h2>
         <ul className="list-disc pl-5">
           {messages.map((message, index) => (
@@ -69,15 +69,15 @@ const HomePage: React.FC = () => {
       <div className="flex flex-col items-center justify-center w-full max-w-md space-y-4">
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-2">
           <h2 className="text-xl font-bold mb-2 text-gray-900">FAQ参照</h2>
-          <p>よくある質問を確認できます。</p>
+          <p className="text-gray-600">よくある質問を確認できます。</p>
         </div>
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-2">
           <h2 className="text-xl font-bold mb-2 text-gray-900">カスハラ判定</h2>
-          <p>問題の複雑さを判断できます。</p>
+          <p className="text-gray-600">問題の複雑さを判断できます。</p>
         </div>
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-2">
           <h2 className="text-xl font-bold mb-2 text-gray-900">対応履歴保存</h2>
-          <p>過去の対応履歴を保存できます。</p>
+          <p className="text-gray-600">過去の対応履歴を保存できます。</p>
         </div>
       </div>
     </div>
