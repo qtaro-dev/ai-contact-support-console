@@ -16,10 +16,16 @@ const HomePage: React.FC = () => {
     setInputValue('');
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSubmit();
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-200">
       <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4">AI問い合わせ対応支援ツール</h1>
+        <h1 className="text-3xl font-bold mb-4 text-black">AI問い合わせ対応支援ツール</h1>
         <p className="mb-4 text-gray-500">質問や要件を入力して、AIがサポートします。</p>
         <ul className="list-disc pl-5 mb-4">
           {messages.map((message, index) => (
@@ -32,7 +38,7 @@ const HomePage: React.FC = () => {
           <input
             value={inputValue}
             onChange={handleInputChange}
-            onPressEnter={handleSubmit}
+            onKeyDown={handleKeyDown}
             placeholder="質問を入力してください"
             className="w-full p-2 border rounded-lg mr-2"
           />
