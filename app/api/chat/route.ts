@@ -33,6 +33,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ answer: data.content });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'ローカルLLMからの回答取得に失敗しました', detail: error.message }, { status: 500 });
+    let detail;
+    if (error instanceof Error) {
+      detail = error.message;
+    } else {
+      detail = String(error) || "Unknown error";
+    }
+    return NextResponse.json({ error: 'ローカルLLMからの回答取得に失敗しました', detail }, { status: 500 });
   }
 }
