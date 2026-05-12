@@ -77,13 +77,13 @@ const HomePage: React.FC = () => {
           {messages.length > 0 && messages[messages.length - 1].role === 'ai' ? (
             <>
               <div className="border-b border-gray-300 p-4">
-                <p className="font-bold mb-2 text-gray-950">質問：</p>
-                <p>{messages[messages.length - 1].content}</p>
+                <p className="font-bold mb-2 text-black">質問：</p>
+                <p className="text-black">{messages[messages.length - 1].content}</p>
               </div>
               <div className="border-b border-gray-300 p-4">
-                <p className="font-bold mb-2 text-gray-950">AI回答：</p>
+                <p className="font-bold mb-2 text-black">AI回答：</p>
                 {messages[messages.length - 1].content ? (
-                  <p>{messages[messages.length - 1].content}</p>
+                  <p className="text-black">{messages[messages.length - 1].content}</p>
                 ) : (
                   <p>まだ回答はありません</p>
                 )}
@@ -95,8 +95,8 @@ const HomePage: React.FC = () => {
           <h2 className="text-xl font-bold mb-4 text-gray-950">問い合わせ履歴</h2>
           {messages.map((message, index) => (
             <div key={index} className="border-b border-gray-300 p-4">
-              <p className="font-bold mb-2 text-gray-950">{message.role === 'user' ? '質問' : 'AI回答'}：</p>
-              <p>{message.content}</p>
+              <p className="font-bold mb-2 text-black">{message.role === 'user' ? '質問' : 'AI回答'}：</p>
+              <p className="text-black">{message.content}</p>
             </div>
           ))}
         </div>
