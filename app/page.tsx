@@ -50,7 +50,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-slate-100">
-      <header className="bg-white p-4 shadow-lg w-full max-w-md mb-8">
+      <header className="bg-white p-4 shadow-lg w-full max-w-md mb-8 sticky top-0 z-10">
         <h1 className="text-3xl font-bold text-gray-950">AI問い合わせ対応支援ツール</h1>
         <p className="text-gray-700">ローカルLLMを使った問い合わせ対応デモ</p>
         <div className="flex items-center space-x-4">
@@ -99,20 +99,6 @@ const HomePage: React.FC = () => {
               <p>{message.content}</p>
             </div>
           ))}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow p-6 space-y-2">
-            <h2 className="text-xl font-bold mb-2 text-gray-950">FAQ参照</h2>
-            <p className="text-gray-800">よくある質問を確認できます。</p>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6 space-y-2">
-            <h2 className="text-xl font-bold mb-2 text-gray-950">カスハラ判定</h2>
-            <p className="text-gray-800">問題の複雑さを判断できます。</p>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6 space-y-2">
-            <h2 className="text-xl font-bold mb-2 text-gray-950">対応履歴保存</h2>
-            <p className="text-gray-800">過去の対応履歴を保存できます。</p>
-          </div>
         </div>
       </main>
     </div>
