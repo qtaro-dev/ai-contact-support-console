@@ -60,13 +60,13 @@ const HomePage: React.FC = () => {
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="bg-white rounded-xl shadow p-6 space-y-6">
           <h2 className="text-xl font-bold mb-4 text-gray-950">問い合わせ入力</h2>
-          <p className="text-gray-700">質問や要件を入力して、ローカルLLMに回答案を作成させます。</p>
+          <p className="text-black">質問や要件を入力して、ローカルLLMに回答案を作成させます。</p>
           <input
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="質問を入力してください"
-            className="w-full p-3 border rounded-lg mr-2 text-gray-900 focus:text-gray-700"
+            className="w-full p-3 border border-gray-700 rounded-lg mr-2 text-black focus:text-black"
           />
           <button onClick={handleSubmit} disabled={loading} className="p-3 bg-blue-500 text-white rounded-lg">
             {loading ? '送信中...' : '送信'}
