@@ -5,16 +5,39 @@ import React, { useState } from 'react';
 const HomePage: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (inputValue.trim() === '') return;
     setMessages([...messages, { role: 'user', content: inputValue }]);
-    setMessages(prevMessages => [...prevMessages, { role: 'ai', content: 'これは仮のAI回答です' }]);
-    setInputValue('');
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message: inputValue })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response from server");
+      }
+
+      const data = await response.json();
+      setMessages(prevMessages => [...prevMessages, { role: 'ai', content: data.answer }]);
+    } catch (error) {
+      console.error(error);
+      alert("ローカルLLMからの回答取得に失敗しました");
+    } finally {
+      setLoading(false);
+      setInputValue('');
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -39,8 +62,8 @@ const HomePage: React.FC = () => {
             placeholder="質問を入力してください"
             className="w-full p-3 border rounded-lg mr-2 text-gray-900 focus:text-gray-700"
           />
-          <button onClick={handleSubmit} className="p-3 bg-blue-500 text-white rounded-lg">
-            送信
+          <button onClick={handleSubmit} disabled={loading} className="p-3 bg-blue-500 text-white rounded-lg">
+            {loading ? '送信中...' : '送信'}
           </button>
         </div>
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-4">
