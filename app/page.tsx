@@ -30,30 +30,28 @@ const HomePage: React.FC = () => {
         <p className="text-gray-500">企業向けのAI問い合わせ対応支援ダッシュボード</p>
       </header>
       <div className="flex flex-col items-center justify-center w-full max-w-6xl py-12 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-md">
-          <div className="bg-white p-6 shadow-lg rounded-lg space-y-4">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">問い合わせ入力</h2>
-            <input
-              value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="質問を入力してください"
-              className="w-full p-3 border rounded-lg mr-2 text-gray-900 focus:text-gray-700"
-            />
-            <button onClick={handleSubmit} className="p-3 bg-blue-500 text-white rounded-lg">
-              送信
-            </button>
-          </div>
-          <div className="bg-white p-6 shadow-lg rounded-lg space-y-4">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">AI回答案</h2>
-            <ul className="list-disc pl-5">
-              {messages.map((message, index) => (
-                <li key={index} className={message.role === 'user' ? 'text-gray-900' : 'text-green-500'}>
-                  {message.content}
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-4">
+          <h2 className="text-xl font-bold mb-4 text-gray-900">問い合わせ入力</h2>
+          <input
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder="質問を入力してください"
+            className="w-full p-3 border rounded-lg mr-2 text-gray-900 focus:text-gray-700"
+          />
+          <button onClick={handleSubmit} className="p-3 bg-blue-500 text-white rounded-lg">
+            送信
+          </button>
+        </div>
+        <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-4">
+          <h2 className="text-xl font-bold mb-4 text-gray-900">AI回答案</h2>
+          <ul className="list-disc pl-5">
+            {messages.map((message, index) => (
+              <li key={index} className={message.role === 'user' ? 'text-gray-900' : 'text-green-500'}>
+                {message.content}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
       <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md">
