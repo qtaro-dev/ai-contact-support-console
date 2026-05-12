@@ -51,12 +51,12 @@ const HomePage: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-slate-100">
       <header className="bg-white p-4 shadow-lg w-full max-w-md mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">AI問い合わせ対応支援ツール</h1>
-        <p className="text-gray-500">企業向けのAI問い合わせ対応支援ダッシュボード</p>
+        <h1 className="text-3xl font-bold text-gray-950">AI問い合わせ対応支援ツール</h1>
+        <p className="text-gray-700">企業向けのAI問い合わせ対応支援ダッシュボード</p>
       </header>
       <div className="flex flex-col items-center justify-center w-full max-w-6xl py-12 space-y-8">
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-4">
-          <h2 className="text-xl font-bold mb-4 text-gray-900">問い合わせ入力</h2>
+          <h2 className="text-xl font-bold mb-4 text-gray-950">問い合わせ入力</h2>
           <input
             value={inputValue}
             onChange={handleInputChange}
@@ -69,15 +69,15 @@ const HomePage: React.FC = () => {
           </button>
         </div>
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-4">
-          <h2 className="text-xl font-bold mb-4 text-gray-900">AI回答案</h2>
+          <h2 className="text-xl font-bold mb-4 text-gray-950">AI回答案</h2>
           {messages.length > 0 && messages[messages.length - 1].role === 'ai' ? (
             <>
               <div className="border-b border-gray-300 p-4">
-                <p className="font-bold mb-2 text-gray-900">質問：</p>
+                <p className="font-bold mb-2 text-gray-950">質問：</p>
                 <p>{messages[messages.length - 1].content}</p>
               </div>
               <div className="border-b border-gray-300 p-4">
-                <p className="font-bold mb-2 text-gray-900">AI回答：</p>
+                <p className="font-bold mb-2 text-gray-950">AI回答：</p>
                 {messages[messages.length - 1].content ? (
                   <p>{messages[messages.length - 1].content}</p>
                 ) : (
@@ -89,26 +89,26 @@ const HomePage: React.FC = () => {
         </div>
       </div>
       <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4 text-gray-900">問い合わせ履歴</h2>
+        <h2 className="text-xl font-bold mb-4 text-gray-950">問い合わせ履歴</h2>
         {messages.map((message, index) => (
           <div key={index} className="border-b border-gray-300 p-4">
-            <p className="font-bold mb-2 text-gray-900">{message.role === 'user' ? '質問' : 'AI回答'}：</p>
+            <p className="font-bold mb-2 text-gray-950">{message.role === 'user' ? '質問' : 'AI回答'}：</p>
             <p>{message.content}</p>
           </div>
         ))}
       </div>
       <div className="flex flex-col items-center justify-center w-full max-w-md space-y-4">
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-2">
-          <h2 className="text-xl font-bold mb-2 text-gray-900">FAQ参照</h2>
-          <p className="text-gray-600">よくある質問を確認できます。</p>
+          <h2 className="text-xl font-bold mb-2 text-gray-950">FAQ参照</h2>
+          <p className="text-gray-800">よくある質問を確認できます。</p>
         </div>
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-2">
-          <h2 className="text-xl font-bold mb-2 text-gray-900">カスハラ判定</h2>
-          <p className="text-gray-600">問題の複雑さを判断できます。</p>
+          <h2 className="text-xl font-bold mb-2 text-gray-950">カスハラ判定</h2>
+          <p className="text-gray-800">問題の複雑さを判断できます。</p>
         </div>
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-2">
-          <h2 className="text-xl font-bold mb-2 text-gray-900">対応履歴保存</h2>
-          <p className="text-gray-600">過去の対応履歴を保存できます。</p>
+          <h2 className="text-xl font-bold mb-2 text-gray-950">対応履歴保存</h2>
+          <p className="text-gray-800">過去の対応履歴を保存できます。</p>
         </div>
       </div>
     </div>
