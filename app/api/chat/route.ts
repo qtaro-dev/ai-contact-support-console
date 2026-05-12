@@ -18,19 +18,21 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        model,
         messages: [{ role: 'user', content: message }],
         stream: false
       })
     });
 
     if (!response.ok) {
-      throw new Error('Failed to get response from Ollama');
+      const errorData = await response.json();
+      throw new Error(`Failed to get response from Ollama: ${errorData.error || errorData.detail}`);
     }
 
     const data = await response.json();
     return NextResponse.json({ answer: data.content });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'ローカルLLMからの回答取得に失敗しました' }, { status: 500 });
+    return NextResponse.json({ error: 'ローカルLLMからの回答取得に失敗しました', detail: error.message }, { status: 500 });
   }
 }

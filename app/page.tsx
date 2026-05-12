@@ -26,7 +26,9 @@ const HomePage: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get response from server");
+        const errorData = await response.json();
+        alert(`エラー: ${errorData.error || errorData.detail}`);
+        return;
       }
 
       const data = await response.json();
