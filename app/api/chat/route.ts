@@ -30,8 +30,9 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log(data);
-    return NextResponse.json({ answer: data.content });
+    console.log("Ollama response:", data);
+    let answer = data.message?.content || data.response || "ローカルLLMから空の回答が返されました。";
+    return NextResponse.json({ answer });
   } catch (error) {
     console.error(error);
     let detail;

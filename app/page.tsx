@@ -73,15 +73,15 @@ const HomePage: React.FC = () => {
           {messages.length > 0 && messages[messages.length - 1].role === 'ai' ? (
             <>
               <div className="border-b border-gray-300 p-4">
-                <p className="font-bold mb-2">質問：</p>
+                <p className="font-bold mb-2 text-gray-900">質問：</p>
                 <p>{messages[messages.length - 1].content}</p>
               </div>
               <div className="border-b border-gray-300 p-4">
-                <p className="font-bold mb-2">AI回答：</p>
+                <p className="font-bold mb-2 text-gray-900">AI回答：</p>
                 {messages[messages.length - 1].content ? (
                   <p>{messages[messages.length - 1].content}</p>
                 ) : (
-                  <p>回答が空でした</p>
+                  <p>ローカルLLMから空の回答が返されました。</p>
                 )}
               </div>
             </>
@@ -92,7 +92,7 @@ const HomePage: React.FC = () => {
         <h2 className="text-xl font-bold mb-4 text-gray-900">問い合わせ履歴</h2>
         {messages.map((message, index) => (
           <div key={index} className="border-b border-gray-300 p-4">
-            <p className="font-bold mb-2">{message.role === 'user' ? '質問' : 'AI回答'}：</p>
+            <p className="font-bold mb-2 text-gray-900">{message.role === 'user' ? '質問' : 'AI回答'}：</p>
             <p>{message.content}</p>
           </div>
         ))}
