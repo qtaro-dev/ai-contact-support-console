@@ -70,24 +70,32 @@ const HomePage: React.FC = () => {
         </div>
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-4">
           <h2 className="text-xl font-bold mb-4 text-gray-900">AI回答案</h2>
-          <ul className="list-disc pl-5">
-            {messages.map((message, index) => (
-              <li key={index} className={message.role === 'user' ? 'text-gray-900' : 'text-green-500'}>
-                {message.content}
-              </li>
-            ))}
-          </ul>
+          {messages.length > 0 && messages[messages.length - 1].role === 'ai' ? (
+            <>
+              <div className="border-b border-gray-300 p-4">
+                <p className="font-bold mb-2">質問：</p>
+                <p>{messages[messages.length - 1].content}</p>
+              </div>
+              <div className="border-b border-gray-300 p-4">
+                <p className="font-bold mb-2">AI回答：</p>
+                {messages[messages.length - 1].content ? (
+                  <p>{messages[messages.length - 1].content}</p>
+                ) : (
+                  <p>回答が空でした</p>
+                )}
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
       <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md">
         <h2 className="text-xl font-bold mb-4 text-gray-900">問い合わせ履歴</h2>
-        <ul className="list-disc pl-5">
-          {messages.map((message, index) => (
-            <li key={index} className={message.role === 'user' ? 'text-gray-900' : 'text-green-500'}>
-              {message.content}
-            </li>
-          ))}
-        </ul>
+        {messages.map((message, index) => (
+          <div key={index} className="border-b border-gray-300 p-4">
+            <p className="font-bold mb-2">{message.role === 'user' ? '質問' : 'AI回答'}：</p>
+            <p>{message.content}</p>
+          </div>
+        ))}
       </div>
       <div className="flex flex-col items-center justify-center w-full max-w-md space-y-4">
         <div className="bg-white p-6 shadow-lg rounded-lg w-full max-w-md space-y-2">
