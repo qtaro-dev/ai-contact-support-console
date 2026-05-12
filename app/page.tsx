@@ -58,7 +58,7 @@ const HomePage: React.FC = () => {
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="bg-white rounded-xl shadow p-6 space-y-6">
+        <div className="bg-white rounded-xl shadow p-6 space-y-6 sticky top-4 z-20" style={{ marginTop: '6rem' }}>
           <h2 className="text-xl font-bold mb-4 text-gray-950">問い合わせ入力</h2>
           <p className="text-black">質問や要件を入力して、ローカルLLMに回答案を作成させます。</p>
           <input
@@ -72,7 +72,7 @@ const HomePage: React.FC = () => {
             {loading ? '送信中...' : '送信'}
           </button>
         </div>
-        <div className="bg-white rounded-xl shadow p-6 space-y-6">
+        <div className="bg-white rounded-xl shadow p-6 space-y-6 mt-8">
           <h2 className="text-xl font-bold mb-4 text-gray-950">AI回答案</h2>
           {messages.length > 0 && messages[messages.length - 1].role === 'ai' ? (
             <>
@@ -91,7 +91,7 @@ const HomePage: React.FC = () => {
             </>
           ) : null}
         </div>
-        <div className="bg-white rounded-xl shadow p-6 space-y-6">
+        <div className="bg-white rounded-xl shadow p-6 space-y-6 mt-8">
           <h2 className="text-xl font-bold mb-4 text-gray-950">問い合わせ履歴</h2>
           {messages.map((message, index) => (
             <div key={index} className="border-b border-gray-300 p-4">
