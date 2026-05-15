@@ -4,6 +4,14 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+if (!supabaseUrl) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL 環境変数が設定されていません');
+}
+
+if (!serviceRoleKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY 環境変数が設定されていません');
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const message = body.message;
@@ -66,7 +74,7 @@ export async function POST(request: NextRequest) {
         .insert([
           {
             question: message,
-            answer: answer,
+            answer: answer || '',
             hit_count: 1,
             created_at: new Date(),
             updated_at: new Date()
