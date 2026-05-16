@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { HarassmentAssessment } from '@/app/types';
+import { AiConfigurationError, generateAiAnswer, getAiGenerationConfig } from '@/lib/aiProvider';
+import { getAppSettings, rateLimitMessage, truncateAnswer } from '@/lib/appSettings';
 import { assessCustomerHarassment } from '@/lib/customerHarassment';
-import { ollamaSystemPrompt } from '@/lib/ollamaPrompt';
 import { getSupabaseServerClient, logSupabaseError } from '@/lib/supabaseServer';
 
 type ChatCacheRow = {
   id: string;
   answer: string | null;
   hit_count: number | null;
+  provider?: string | null;
+  model?: string | null;
 };
 
 type InquiryInput = {
@@ -23,7 +26,39 @@ type InquiryInput = {
   harassmentAssessment: HarassmentAssessment;
 };
 
-const getCachedAnswer = async (supabase: SupabaseClient, question: string) => {
+const isMissingCacheProviderColumn = (message?: string) =>
+  Boolean(message?.includes('provider') || message?.includes('model'));
+
+const getProviderScopedCachedAnswer = async (
+  supabase: SupabaseClient,
+  question: string,
+  provider: string,
+  model: string
+) => {
+  const { data, error } = await supabase
+    .from('chat_cache')
+    .select('id, answer, hit_count, provider, model')
+    .eq('question', question)
+    .eq('provider', provider)
+    .eq('model', model)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<ChatCacheRow>();
+
+  if (error) {
+    if (isMissingCacheProviderColumn(error.message)) {
+      console.warn('Provider-scoped chat cache skipped: provider/model columns are unavailable.');
+      return null;
+    }
+
+    logSupabaseError('chat cache read', error);
+    return null;
+  }
+
+  return data;
+};
+
+const getLegacyCachedAnswer = async (supabase: SupabaseClient, question: string) => {
   const { data, error } = await supabase
     .from('chat_cache')
     .select('id, answer, hit_count')
@@ -33,9 +68,22 @@ const getCachedAnswer = async (supabase: SupabaseClient, question: string) => {
     .maybeSingle<ChatCacheRow>();
 
   if (error) {
-    logSupabaseError('chat cache read', error);
+    logSupabaseError('legacy chat cache read', error);
     return null;
   }
+
+  return data;
+};
+
+const getCachedAnswer = async (
+  supabase: SupabaseClient,
+  question: string,
+  provider: string,
+  model: string
+) => {
+  const data =
+    (await getProviderScopedCachedAnswer(supabase, question, provider, model)) ??
+    (provider === 'ollama' ? await getLegacyCachedAnswer(supabase, question) : null);
 
   if (!data?.answer) {
     return null;
@@ -59,7 +107,9 @@ const getCachedAnswer = async (supabase: SupabaseClient, question: string) => {
 const saveAnswerToCache = async (
   supabase: SupabaseClient,
   question: string,
-  answer: string
+  answer: string,
+  provider: string,
+  model: string
 ) => {
   const now = new Date().toISOString();
   const { error } = await supabase
@@ -68,6 +118,8 @@ const saveAnswerToCache = async (
       {
         question,
         answer,
+        provider,
+        model,
         hit_count: 1,
         created_at: now,
         updated_at: now
@@ -75,6 +127,26 @@ const saveAnswerToCache = async (
     ]);
 
   if (error) {
+    if (isMissingCacheProviderColumn(error.message)) {
+      const { error: legacyError } = await supabase
+        .from('chat_cache')
+        .insert([
+          {
+            question,
+            answer,
+            hit_count: 1,
+            created_at: now,
+            updated_at: now
+          }
+        ]);
+
+      if (legacyError) {
+        logSupabaseError('legacy chat cache save', legacyError);
+      }
+
+      return;
+    }
+
     logSupabaseError('chat cache save', error);
   }
 };
@@ -151,6 +223,31 @@ const saveInquiryIfAvailable = async (
   await saveInquiry(supabase, input);
 };
 
+const isRateLimited = async (
+  supabase: SupabaseClient | null,
+  ipAddress: string | null,
+  windowSeconds: number,
+  maxRequests: number
+) => {
+  if (!supabase || !ipAddress) {
+    return false;
+  }
+
+  const since = new Date(Date.now() - windowSeconds * 1000).toISOString();
+  const { count, error } = await supabase
+    .from('inquiries')
+    .select('id', { count: 'exact', head: true })
+    .eq('ip_address', ipAddress)
+    .gte('created_at', since);
+
+  if (error) {
+    logSupabaseError('rate limit inquiry count', error);
+    return false;
+  }
+
+  return (count ?? 0) >= maxRequests;
+};
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const message = typeof body.message === 'string' ? body.message.trim() : '';
@@ -162,62 +259,68 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const provider = 'ollama';
-    const apiUrl = process.env.OLLAMA_API_URL || 'http://localhost:11434';
-    const model = process.env.OLLAMA_MODEL || 'qwen2.5-coder:7b';
+    const appSettings = getAppSettings();
+    const aiConfig = getAiGenerationConfig();
     const ipAddress = getIpAddress(request);
     const userAgent = request.headers.get('user-agent');
     const harassmentAssessment = assessCustomerHarassment(message);
     const supabase = getSupabaseServerClient();
-    const cachedAnswer = supabase ? await getCachedAnswer(supabase, message) : null;
+    const rateLimited = appSettings.rateLimitEnabled
+      ? await isRateLimited(
+          supabase,
+          ipAddress,
+          appSettings.rateLimitWindowSeconds,
+          appSettings.rateLimitMaxRequests
+        )
+      : false;
 
-    if (cachedAnswer) {
+    if (rateLimited && appSettings.skipAiOnRateLimit) {
       await saveInquiryIfAvailable(supabase, {
         userName,
         email,
         ipAddress,
         userAgent,
         message,
-        answer: cachedAnswer,
-        provider,
-        model,
+        answer: rateLimitMessage,
+        provider: aiConfig.provider,
+        model: aiConfig.model,
         harassmentAssessment
       });
 
-      return NextResponse.json({ answer: cachedAnswer, harassmentAssessment });
+      return NextResponse.json({
+        answer: rateLimitMessage,
+        harassmentAssessment,
+        rateLimited: true
+      });
     }
 
-    const response = await fetch(`${apiUrl}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: ollamaSystemPrompt },
-          { role: 'user', content: message }
-        ],
-        stream: false
-      })
-    });
+    const cachedAnswer = supabase
+      ? await getCachedAnswer(supabase, message, aiConfig.provider, aiConfig.model)
+      : null;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        `Failed to get response from Ollama: ${errorData.error || errorData.detail || response.statusText}`
-      );
+    if (cachedAnswer) {
+      const answer = truncateAnswer(cachedAnswer, appSettings.aiMaxOutputChars);
+      await saveInquiryIfAvailable(supabase, {
+        userName,
+        email,
+        ipAddress,
+        userAgent,
+        message,
+        answer,
+        provider: aiConfig.provider,
+        model: aiConfig.model,
+        harassmentAssessment
+      });
+
+      return NextResponse.json({ answer, harassmentAssessment, rateLimited });
     }
 
-    const data = await response.json();
-    console.log('Ollama response:', data);
-    const answer =
-      data.message?.content ||
-      data.response ||
-      'ローカルLLMから空の回答が返されました。';
+    const generatedAnswer = await generateAiAnswer(message, appSettings.aiMaxOutputChars);
+    const { provider, model } = generatedAnswer;
+    const answer = truncateAnswer(generatedAnswer.answer, appSettings.aiMaxOutputChars);
 
     if (supabase) {
-      await saveAnswerToCache(supabase, message, answer);
+      await saveAnswerToCache(supabase, message, answer, provider, model);
     }
 
     await saveInquiryIfAvailable(supabase, {
@@ -232,13 +335,15 @@ export async function POST(request: NextRequest) {
       harassmentAssessment
     });
 
-    return NextResponse.json({ answer, harassmentAssessment });
+    return NextResponse.json({ answer, harassmentAssessment, rateLimited });
   } catch (error) {
     console.error(error);
     const detail = error instanceof Error ? error.message : String(error) || 'Unknown error';
+    const status = error instanceof AiConfigurationError ? error.status : 500;
+
     return NextResponse.json(
-      { error: 'ローカルLLMからの回答取得に失敗しました', detail },
-      { status: 500 }
+      { error: 'AI回答の取得に失敗しました', detail },
+      { status }
     );
   }
 }

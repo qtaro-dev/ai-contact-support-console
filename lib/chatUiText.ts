@@ -39,6 +39,8 @@ export const adminUiText = {
   title: '問い合わせ管理',
   description: '過去の問い合わせ、カスハラリスク、推定タイプ、対応状況を確認できます。',
   warning: '開発用管理画面です。本番公開前に認証を追加してください。',
+  settingsLinkLabel: '設定画面へ',
+  logoutLabel: 'ログアウト',
   emptyMessage: '問い合わせ記録はまだありません。',
   unavailableMessage: 'Supabase接続情報が未設定のため、問い合わせ一覧を表示できません。',
   createdAtLabel: '作成日時',
@@ -54,6 +56,41 @@ export const adminUiText = {
   noNameLabel: '未入力',
   noEmailLabel: '未入力',
   noAnswerLabel: '回答なし'
+};
+
+export const adminLoginUiText = {
+  title: '管理者ログイン',
+  description: '管理画面を表示するには管理者パスワードを入力してください。',
+  passwordLabel: '管理者パスワード',
+  passwordPlaceholder: 'パスワードを入力してください',
+  submitLabel: 'ログイン',
+  invalidMessage: 'パスワードが正しくないか、管理者パスワードが未設定です。',
+  configMessage: '管理者セッション設定が未設定です。ADMIN_SESSION_SECRET を確認してください。',
+  helperMessage: 'ポートフォリオ用の簡易認証です。本番運用では正式な認証方式を追加してください。'
+};
+
+export const settingsUiText = {
+  title: '運用設定',
+  description:
+    'この画面は環境変数の確認用です。変更はVercel Environment Variables または .env.local で行ってください。',
+  backToAdminLabel: '管理画面へ戻る',
+  logoutLabel: 'ログアウト',
+  aiProviderLabel: 'AIプロバイダ',
+  aiModelLabel: '使用モデル',
+  aiMaxOutputCharsLabel: 'AI回答最大文字数',
+  rateLimitEnabledLabel: 'IP送信制限',
+  rateLimitWindowSecondsLabel: '制限時間',
+  rateLimitMaxRequestsLabel: '同一IPの最大送信回数',
+  skipAiOnRateLimitLabel: '制限時にAI APIを呼ばない',
+  openAiApiKeyStatusLabel: 'OpenAI APIキー状態',
+  supabaseServiceRoleKeyStatusLabel: 'Supabase service role key状態',
+  configuredLabel: '設定済み',
+  missingLabel: '未設定',
+  enabledLabel: '有効',
+  disabledLabel: '無効',
+  secondsSuffix: '秒',
+  charsSuffix: '文字',
+  requestsSuffix: '回'
 };
 
 export const riskLevelLabels: Record<HarassmentRiskLevel, string> = {

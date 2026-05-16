@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { InquiryRecord } from '@/app/types';
 import {
   adminUiText,
@@ -61,8 +62,22 @@ const AdminPage = async () => {
     <div className="min-h-screen bg-slate-100">
       <main className="mx-auto w-full max-w-7xl px-6 py-8">
         <header className="mb-8 rounded-xl bg-white p-6 shadow">
-          <h1 className="text-3xl font-bold text-gray-950">{adminUiText.title}</h1>
-          <p className="mt-2 text-gray-700">{adminUiText.description}</p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-950">{adminUiText.title}</h1>
+              <p className="mt-2 text-gray-700">{adminUiText.description}</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/settings" className="rounded-lg bg-blue-500 p-3 text-white">
+                {adminUiText.settingsLinkLabel}
+              </Link>
+              <form action="/api/admin-logout" method="post">
+                <button type="submit" className="rounded-lg bg-slate-700 p-3 text-white">
+                  {adminUiText.logoutLabel}
+                </button>
+              </form>
+            </div>
+          </div>
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
             {adminUiText.warning}
           </p>

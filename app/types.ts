@@ -30,6 +30,7 @@ export type HarassmentAssessment = {
 export type ChatApiResponse = {
   answer: string;
   harassmentAssessment: HarassmentAssessment;
+  rateLimited?: boolean;
 };
 
 export type InquiryStatus = 'new' | 'in_progress' | 'escalated' | 'resolved' | 'on_hold';
