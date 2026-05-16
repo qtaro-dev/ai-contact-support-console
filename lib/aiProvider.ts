@@ -64,11 +64,8 @@ export const getAiGenerationConfig = (): AiGenerationConfig => {
   };
 };
 
-const hasSelfHarmSignal = (message: string) =>
-  /自傷|自殺|自死|死にたい|消えたい|命を絶つ|首を吊る|リストカット/.test(message.normalize('NFKC'));
-
-const getDemoAnswer = (message: string, assessment: HarassmentAssessment) => {
-  if (hasSelfHarmSignal(message)) {
+const getDemoAnswer = (assessment: HarassmentAssessment) => {
+  if (assessment.categories.includes('self_harm')) {
     return '安全確認が必要な内容です。緊急性がある場合は、すぐに周囲の人や公的な相談窓口、緊急窓口へつなぐ対応を検討してください。';
   }
 
@@ -223,7 +220,7 @@ export const generateAiAnswer = async (
   const config = getAiGenerationConfig();
   const answer = await (async () => {
     if (config.provider === 'demo') {
-      return getDemoAnswer(message, assessment);
+      return getDemoAnswer(assessment);
     }
 
     if (config.provider === 'openai') {

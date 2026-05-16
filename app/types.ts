@@ -15,6 +15,9 @@ export type HarassmentCategory =
   | 'repeated_or_persistent'
   | 'personal_attack'
   | 'discriminatory_or_sexual'
+  | 'strong_complaint'
+  | 'aggressive_behavior'
+  | 'self_harm'
   | 'normal_complaint';
 
 export type HarassmentAssessment = {
