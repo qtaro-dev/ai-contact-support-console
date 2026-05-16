@@ -4,6 +4,37 @@ export const chatUiText = {
   headerTitle: 'AI問い合わせ対応支援ツール',
   headerDescription: 'ローカルLLMを使った問い合わせ対応デモ',
   connectionLabel: 'Ollama接続 / ローカル実行',
+  demoSamplesTitle: 'デモ用サンプル',
+  demoSampleButtons: [
+    {
+      label: '通常問い合わせ',
+      text: '注文した商品がまだ届いていません。配送状況を確認してもらえますか？'
+    },
+    {
+      label: '強い苦情',
+      text: '何度問い合わせても返事がなく困っています。早急に状況を確認して連絡してください。'
+    },
+    {
+      label: '不当要求',
+      text: '納得できないので、全額返金に加えて迷惑料も支払ってください。対応しないなら公表します。'
+    },
+    {
+      label: '脅迫表現',
+      text: 'このまま無視するなら、店舗に行って大声で抗議します。責任者をすぐに出してください。'
+    },
+    {
+      label: '執着表現',
+      text: '返事が来るまで毎日何度でも連絡します。逃げずに必ず対応してください。'
+    },
+    {
+      label: '性的表現',
+      text: '問い合わせ内容に性的で不適切な表現を含むサンプルです。通常対応ではなく管理者確認が必要です。'
+    },
+    {
+      label: '自傷示唆',
+      text: 'このまま解決しないなら、自分を傷つけてしまいそうです。どうしたらいいですか。'
+    }
+  ],
   inputTitle: '問い合わせ入力',
   inputDescription: 'お名前とメールアドレスは任意です。問い合わせ内容を入力してください。',
   userNameLabel: 'お名前',
@@ -73,6 +104,7 @@ export const settingsUiText = {
   title: '運用設定',
   description:
     'この画面は環境変数の確認用です。変更はVercel Environment Variables または .env.local で行ってください。',
+  aiModeDescriptionLabel: '実行モード説明',
   backToAdminLabel: '管理画面へ戻る',
   logoutLabel: 'ログアウト',
   aiProviderLabel: 'AIプロバイダ',

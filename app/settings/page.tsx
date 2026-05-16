@@ -1,14 +1,16 @@
 import Link from 'next/link';
-import { getAppSettings } from '@/lib/appSettings';
+import { getAiModeDisplay, getAppSettings } from '@/lib/appSettings';
 import { settingsUiText } from '@/lib/chatUiText';
 
 export const dynamic = 'force-dynamic';
 
 const SettingsPage = () => {
   const settings = getAppSettings();
+  const aiMode = getAiModeDisplay();
   const rows = [
     [settingsUiText.aiProviderLabel, settings.aiProvider],
     [settingsUiText.aiModelLabel, settings.aiModel],
+    [settingsUiText.aiModeDescriptionLabel, aiMode.description],
     [
       settingsUiText.aiMaxOutputCharsLabel,
       `${settings.aiMaxOutputChars}${settingsUiText.charsSuffix}`

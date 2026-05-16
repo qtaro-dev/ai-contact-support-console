@@ -315,7 +315,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ answer, harassmentAssessment, rateLimited });
     }
 
-    const generatedAnswer = await generateAiAnswer(message, appSettings.aiMaxOutputChars);
+    const generatedAnswer = await generateAiAnswer(
+      message,
+      appSettings.aiMaxOutputChars,
+      harassmentAssessment
+    );
     const { provider, model } = generatedAnswer;
     const answer = truncateAnswer(generatedAnswer.answer, appSettings.aiMaxOutputChars);
 

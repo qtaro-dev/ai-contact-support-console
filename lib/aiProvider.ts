@@ -1,6 +1,7 @@
 import { aiAnswerSystemPrompt } from '@/lib/ollamaPrompt';
+import type { HarassmentAssessment } from '@/app/types';
 
-export type AiProvider = 'ollama' | 'openai';
+export type AiProvider = 'ollama' | 'openai' | 'demo';
 
 export type AiGenerationConfig = {
   provider: AiProvider;
@@ -23,6 +24,7 @@ export class AiConfigurationError extends Error {
 
 const defaultOllamaModel = 'qwen2.5-coder:7b';
 const defaultOpenAiModel = 'gpt-4.1-mini';
+const demoModel = 'demo-template';
 
 const buildSystemPrompt = (maxOutputChars: number) =>
   `${aiAnswerSystemPrompt}\n回答は最大${maxOutputChars}文字以内に収めてください。`;
@@ -30,12 +32,12 @@ const buildSystemPrompt = (maxOutputChars: number) =>
 const getAiProvider = (): AiProvider => {
   const provider = (process.env.AI_PROVIDER || 'ollama').toLowerCase();
 
-  if (provider === 'ollama' || provider === 'openai') {
+  if (provider === 'ollama' || provider === 'openai' || provider === 'demo') {
     return provider;
   }
 
   throw new AiConfigurationError(
-    'AI_PROVIDER は "ollama" または "openai" を指定してください。'
+    'AI_PROVIDER は "ollama"、"openai"、"demo" のいずれかを指定してください。'
   );
 };
 
@@ -49,10 +51,40 @@ export const getAiGenerationConfig = (): AiGenerationConfig => {
     };
   }
 
+  if (provider === 'demo') {
+    return {
+      provider,
+      model: demoModel
+    };
+  }
+
   return {
     provider,
     model: process.env.OLLAMA_MODEL || defaultOllamaModel
   };
+};
+
+const hasSelfHarmSignal = (message: string) =>
+  /自傷|自殺|自死|死にたい|消えたい|命を絶つ|首を吊る|リストカット/.test(message.normalize('NFKC'));
+
+const getDemoAnswer = (message: string, assessment: HarassmentAssessment) => {
+  if (hasSelfHarmSignal(message)) {
+    return '安全確認が必要な内容です。緊急性がある場合は、すぐに周囲の人や公的な相談窓口、緊急窓口へつなぐ対応を検討してください。';
+  }
+
+  if (assessment.categories.includes('discriminatory_or_sexual')) {
+    return '問い合わせ内容に不適切な表現が含まれています。通常対応は行わず、内容を記録したうえで管理者確認に回してください。';
+  }
+
+  if (assessment.level === 'high') {
+    return '安全確保を優先する必要があります。対応者は単独判断を避け、管理者確認に回してください。必要に応じて対応を中断し、記録を残してください。';
+  }
+
+  if (assessment.level === 'medium') {
+    return 'ご不便をおかけして申し訳ありません。内容を確認し、事実関係を整理したうえで対応いたします。状況が分かる情報があればお知らせください。';
+  }
+
+  return 'お問い合わせありがとうございます。内容を確認し、必要に応じて担当者よりご連絡いたします。追加情報があれば、続けてお知らせください。';
 };
 
 const getOpenAiText = (data: unknown): string | null => {
@@ -185,13 +217,21 @@ const getOpenAiAnswer = async (message: string, model: string, maxOutputChars: n
 
 export const generateAiAnswer = async (
   message: string,
-  maxOutputChars: number
+  maxOutputChars: number,
+  assessment: HarassmentAssessment
 ): Promise<AiGenerationResult> => {
   const config = getAiGenerationConfig();
-  const answer =
-    config.provider === 'openai'
-      ? await getOpenAiAnswer(message, config.model, maxOutputChars)
-      : await getOllamaAnswer(message, config.model, maxOutputChars);
+  const answer = await (async () => {
+    if (config.provider === 'demo') {
+      return getDemoAnswer(message, assessment);
+    }
+
+    if (config.provider === 'openai') {
+      return getOpenAiAnswer(message, config.model, maxOutputChars);
+    }
+
+    return getOllamaAnswer(message, config.model, maxOutputChars);
+  })();
 
   return {
     ...config,

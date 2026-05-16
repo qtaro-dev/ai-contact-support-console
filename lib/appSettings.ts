@@ -1,4 +1,11 @@
-import { getAiGenerationConfig } from '@/lib/aiProvider';
+import { getAiGenerationConfig, type AiProvider } from '@/lib/aiProvider';
+
+export type AiModeDisplay = {
+  provider: AiProvider;
+  label: string;
+  description: string;
+  tone: 'local' | 'production' | 'demo';
+};
 
 const parseBoolean = (value: string | undefined, defaultValue: boolean) => {
   if (value === 'true') {
@@ -49,6 +56,35 @@ export const getAppSettings = () => {
 };
 
 export type AppSettings = ReturnType<typeof getAppSettings>;
+
+export const getAiModeDisplay = (): AiModeDisplay => {
+  const { provider } = getAiGenerationConfig();
+
+  if (provider === 'openai') {
+    return {
+      provider,
+      label: 'OpenAI API / 本番実行',
+      description: 'OpenAI APIを使う本番向けの回答生成モードです。',
+      tone: 'production'
+    };
+  }
+
+  if (provider === 'demo') {
+    return {
+      provider,
+      label: 'AI-KEY無し demoモード',
+      description: 'demoモードではOpenAI/Ollama APIを呼ばず、固定テンプレート回答で動作します。',
+      tone: 'demo'
+    };
+  }
+
+  return {
+    provider,
+    label: 'Ollama接続 / ローカル実行',
+    description: 'ローカルのOllamaを使う開発向けの回答生成モードです。',
+    tone: 'local'
+  };
+};
 
 export const truncateAnswer = (answer: string, maxChars: number) => {
   if (answer.length <= maxChars) {
