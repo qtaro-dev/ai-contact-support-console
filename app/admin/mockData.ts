@@ -1,0 +1,90 @@
+import type { InquiryRecord } from '@/app/types';
+
+export const mockInquiryRecords: InquiryRecord[] = [
+  {
+    id: 1,
+    user_name: '田中 太郎',
+    email: 'tanaka@example.com',
+    ip_address: '192.168.1.10',
+    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    message: '注文した商品がまだ届いていません。配送状況を確認してもらえますか？',
+    answer: 'お問い合わせありがとうございます。ご注文内容と配送状況を確認のうえ、担当者よりご連絡いたします。',
+    provider: 'demo',
+    model: 'demo-template',
+    risk_level: 'none',
+    harassment_type: 'other',
+    harassment_categories: ['normal_complaint'],
+    assessment_reasons: ['威圧、暴言、脅迫、不当要求に該当する強い表現は検出されていません。'],
+    recommended_action: '通常の問い合わせとして対応してください。必要に応じて内容を記録してください。',
+    status: 'resolved',
+    admin_note: null,
+    created_at: '2026-09-28T09:15:00.000Z',
+    updated_at: '2026-09-28T09:20:00.000Z'
+  },
+  {
+    id: 2,
+    user_name: '鈴木 一郎',
+    email: 'suzuki@example.com',
+    ip_address: '192.168.1.11',
+    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+    message: '何度問い合わせても返事がなく困っています。早急に状況を確認して連絡してください。',
+    answer: 'ご不便をおかけして申し訳ありません。至急事実関係を確認し、折り返しご連絡いたします。',
+    provider: 'demo',
+    model: 'demo-template',
+    risk_level: 'low',
+    harassment_type: 'stress_release',
+    harassment_categories: ['strong_complaint'],
+    assessment_reasons: ['「何度問い合わせても」「返事がない」など、強い不満や苦情を示す表現が含まれています。'],
+    recommended_action: '事実確認を行い、冷静な文面で対応してください。やり取りは記録してください。',
+    status: 'in_progress',
+    admin_note: null,
+    created_at: '2026-09-28T09:30:00.000Z',
+    updated_at: '2026-09-28T09:35:00.000Z'
+  },
+  {
+    id: 3,
+    user_name: null,
+    email: null,
+    ip_address: '192.168.1.12',
+    user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+    message: '納得できないので、全額返金に加えて迷惑料も支払ってください。対応しないなら公表します。',
+    answer: 'ご不便をおかけして申し訳ありません。内容を確認し、事実関係を整理したうえで対応方針を検討いたします。',
+    provider: 'demo',
+    model: 'demo-template',
+    risk_level: 'medium',
+    harassment_type: 'distorted_justice',
+    harassment_categories: ['coercive_demand'],
+    assessment_reasons: [
+      '「全額返金」「迷惑料」など、通常範囲を超える金銭要求が含まれています。',
+      '「公表します」など、社会的圧力を示す表現が含まれています。'
+    ],
+    recommended_action: '要求内容を記録し、対応範囲を明確にしてください。金銭補償などは管理者確認に回してください。',
+    status: 'escalated',
+    admin_note: '上長共有済み。返金ポリシーに基づき回答準備中。',
+    created_at: '2026-09-28T09:45:00.000Z',
+    updated_at: '2026-09-28T09:50:00.000Z'
+  },
+  {
+    id: 4,
+    user_name: null,
+    email: null,
+    ip_address: '192.168.1.13',
+    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    message: 'このまま無視するなら、店舗に行って大声で抗議します。責任者をすぐに出してください。',
+    answer: '安全確保を優先する必要があります。対応者は単独判断を避け、管理者確認に回してください。',
+    provider: 'demo',
+    model: 'demo-template',
+    risk_level: 'high',
+    harassment_type: 'aggressive',
+    harassment_categories: ['threat', 'aggressive_behavior'],
+    assessment_reasons: [
+      '「店舗に行く」など、対面での圧力につながる表現が含まれています。',
+      '「大声で抗議」「責任者を出せ」など、対面での威圧につながる表現が含まれています。'
+    ],
+    recommended_action: '対応者の安全を優先し、単独対応を避けてください。必要に応じて対応を中断し、管理者確認に回してください。',
+    status: 'escalated',
+    admin_note: '店舗セキュリティ担当へ共有完了。',
+    created_at: '2026-09-28T10:00:00.000Z',
+    updated_at: '2026-09-28T10:05:00.000Z'
+  }
+];

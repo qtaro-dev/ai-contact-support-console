@@ -25,7 +25,6 @@ type HomePageClientProps = {
 
 const modeBadgeStyles: Record<AiModeDisplay['tone'], string> = {
   local: 'bg-green-200 text-green-800',
-  production: 'bg-blue-100 text-blue-800',
   demo: 'bg-sky-100 text-sky-800'
 };
 

@@ -15,32 +15,7 @@ const SettingsPage = () => {
       settingsUiText.aiMaxOutputCharsLabel,
       `${settings.aiMaxOutputChars}${settingsUiText.charsSuffix}`
     ],
-    [
-      settingsUiText.rateLimitEnabledLabel,
-      settings.rateLimitEnabled ? settingsUiText.enabledLabel : settingsUiText.disabledLabel
-    ],
-    [
-      settingsUiText.rateLimitWindowSecondsLabel,
-      `${settings.rateLimitWindowSeconds}${settingsUiText.secondsSuffix}`
-    ],
-    [
-      settingsUiText.rateLimitMaxRequestsLabel,
-      `${settings.rateLimitMaxRequests}${settingsUiText.requestsSuffix}`
-    ],
-    [
-      settingsUiText.skipAiOnRateLimitLabel,
-      settings.skipAiOnRateLimit ? settingsUiText.enabledLabel : settingsUiText.disabledLabel
-    ],
-    [
-      settingsUiText.openAiApiKeyStatusLabel,
-      settings.hasOpenAiApiKey ? settingsUiText.configuredLabel : settingsUiText.missingLabel
-    ],
-    [
-      settingsUiText.supabaseServiceRoleKeyStatusLabel,
-      settings.hasSupabaseServiceRoleKey
-        ? settingsUiText.configuredLabel
-        : settingsUiText.missingLabel
-    ]
+    [settingsUiText.ollamaApiBaseLabel, settings.ollamaApiBase]
   ];
 
   return (

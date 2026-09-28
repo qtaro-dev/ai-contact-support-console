@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import type { InquiryRecord } from '@/app/types';
 import {
   adminUiText,
   inquiryStatusLabels,
@@ -7,35 +6,9 @@ import {
   riskLevelLabels
 } from '@/lib/chatUiText';
 import { harassmentTypeLabels } from '@/lib/customerHarassment';
-import { getSupabaseServerClient, logSupabaseError } from '@/lib/supabaseServer';
+import { mockInquiryRecords } from '@/app/admin/mockData';
 
 export const dynamic = 'force-dynamic';
-
-const inquiryListLimit = 100;
-
-const getInquiries = async () => {
-  const supabase = getSupabaseServerClient();
-
-  if (!supabase) {
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from('inquiries')
-    .select(
-      'id, user_name, email, ip_address, user_agent, message, answer, provider, model, risk_level, harassment_type, harassment_categories, assessment_reasons, recommended_action, status, admin_note, created_at, updated_at'
-    )
-    .order('created_at', { ascending: false })
-    .limit(inquiryListLimit)
-    .returns<InquiryRecord[]>();
-
-  if (error) {
-    logSupabaseError('admin inquiries read', error);
-    return [];
-  }
-
-  return data;
-};
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -56,7 +29,7 @@ const truncateText = (value: string | null, maxLength: number) => {
 };
 
 const AdminPage = async () => {
-  const inquiries = await getInquiries();
+  const inquiries = mockInquiryRecords;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -78,15 +51,13 @@ const AdminPage = async () => {
               </form>
             </div>
           </div>
-          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
-            {adminUiText.warning}
+          <p className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sky-800">
+            {adminUiText.demoNotice}
           </p>
         </header>
 
         <section className="rounded-xl bg-white p-6 shadow">
-          {inquiries === null ? (
-            <p className="text-black">{adminUiText.unavailableMessage}</p>
-          ) : inquiries.length === 0 ? (
+          {inquiries.length === 0 ? (
             <p className="text-black">{adminUiText.emptyMessage}</p>
           ) : (
             <div className="overflow-x-auto">

@@ -68,12 +68,11 @@ export const chatUiText = {
 
 export const adminUiText = {
   title: '問い合わせ管理',
-  description: '過去の問い合わせ、カスハラリスク、推定タイプ、対応状況を確認できます。',
-  warning: '開発用管理画面です。本番公開前に認証を追加してください。',
+  description: '過去の問い合わせ、カスハラリスク、推定タイプ、対応状況の表示デモです。',
+  demoNotice: '※ポートフォリオ展示用の固定デモデータを表示しています。永続データベースには接続されていません。',
   settingsLinkLabel: '設定画面へ',
   logoutLabel: 'ログアウト',
   emptyMessage: '問い合わせ記録はまだありません。',
-  unavailableMessage: 'Supabase接続情報が未設定のため、問い合わせ一覧を表示できません。',
   createdAtLabel: '作成日時',
   userNameLabel: 'お名前',
   emailLabel: 'メールアドレス',
@@ -109,20 +108,20 @@ export const settingsUiText = {
   logoutLabel: 'ログアウト',
   aiProviderLabel: 'AIプロバイダ',
   aiModelLabel: '使用モデル',
+  ollamaApiBaseLabel: 'Ollama接続先URL',
   aiMaxOutputCharsLabel: 'AI回答最大文字数',
-  rateLimitEnabledLabel: 'IP送信制限',
-  rateLimitWindowSecondsLabel: '制限時間',
-  rateLimitMaxRequestsLabel: '同一IPの最大送信回数',
-  skipAiOnRateLimitLabel: '制限時にAI APIを呼ばない',
-  openAiApiKeyStatusLabel: 'OpenAI APIキー状態',
-  supabaseServiceRoleKeyStatusLabel: 'Supabase service role key状態',
-  configuredLabel: '設定済み',
-  missingLabel: '未設定',
-  enabledLabel: '有効',
-  disabledLabel: '無効',
-  secondsSuffix: '秒',
-  charsSuffix: '文字',
-  requestsSuffix: '回'
+  charsSuffix: '文字'
+};
+
+export const aiModeText = {
+  demo: {
+    label: 'AI-KEY無し demoモード',
+    description: 'demoモードでは外部APIを呼ばず、固定テンプレート回答とカスハラ判定で動作します。'
+  },
+  ollama: {
+    label: 'Ollama接続 / ローカル実行',
+    description: 'ローカルのOllamaを使う開発向けの回答生成モードです。'
+  }
 };
 
 export const riskLevelLabels: Record<HarassmentRiskLevel, string> = {
