@@ -141,7 +141,7 @@ export const settingsUiText = {
 export const aiModeText = {
   demo: {
     label: 'AI-KEY無し demoモード',
-    description: 'demoモードでは外部APIを呼ばず、固定テンプレート回答とカスハラ判定で動作します。'
+    description: 'demoモードでは外部AI APIやOllamaを呼ばず、固定テンプレート回答とカスハラ判定で動作します。'
   },
   ollama: {
     label: 'Ollama接続 / ローカル実行',
