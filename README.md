@@ -33,7 +33,7 @@ $env:SECURITY_SINGLE_PROCESS = 'true'
 npm run start -- --hostname 127.0.0.1
 ```
 
-`memory`は単一Node.jsプロセスだけを保護します。複数プロセス、複数インスタンス、サーバーレスで使用しないでください。本番のSecure Cookieを使う管理者認証はHTTPSで運用してください。
+`memory`は単一Node.jsプロセスだけを保護します。複数プロセス、複数インスタンス、サーバーレスで使用しないでください。Vercel（`VERCEL=1`）ではローカル用の明示設定があっても`memory`を拒否します。本番のSecure Cookieを使う管理者認証はHTTPSで運用してください。
 
 ## 環境変数
 
@@ -51,10 +51,12 @@ npm run start -- --hostname 127.0.0.1
 | `SECURITY_STORE` | `redis`または`memory`。本番の既定`redis`、開発の既定`memory` |
 | `SECURITY_REDIS_REST_URL` | Upstash互換Redis RESTエンドポイント。HTTPS必須 |
 | `SECURITY_REDIS_REST_TOKEN` | Redis RESTトークン。読み書きとEVALが可能な権限が必要 |
-| `SECURITY_SINGLE_PROCESS` | 本番で`memory`を使う場合だけ`true`。複数インスタンスでは設定禁止 |
+| `SECURITY_SINGLE_PROCESS` | 単一プロセスの本番相当ローカル検証で`memory`を使う場合だけ`true`。Vercelでは許可されない |
 | `APP_ORIGIN` | 任意の固定公開origin（例：`https://your-domain.example`）。未設定時はリクエストのHostを使用。入口側でHostを検証すること |
 
 全インスタンスで同一のRedisデータベース、署名鍵、管理者パスワードを使用してください。ステージングと本番は別のRedisデータベースへ分離してください。
+
+VercelのPreviewとProductionでは、環境変数の適用先を分けて設定してください。PreviewにはProductionとは別のRedisデータベースと管理者認証情報を使い、`APP_ORIGIN`も検証に使用するPreviewの正規HTTPS URLへ合わせます。Production側の変数をPreviewのために上書きしないでください。Previewのデプロイ保護は維持し、認証された状態で検証します。既存Redisの利用可否、料金、契約の確認が済むまで、新しいサービスの作成や接続は行わないでください。
 
 ## 公開デモの構成
 

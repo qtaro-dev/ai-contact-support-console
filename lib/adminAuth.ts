@@ -44,8 +44,10 @@ const verifiedSessionId = async (sessionValue: string | undefined) => {
   const secret = getAdminSessionSecret();
   if (!secret || !getAdminPassword() || !sessionValue || sessionValue.length > 160) return null;
   const match = /^(\d{13})\.([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.([0-9a-f]{64})$/.exec(sessionValue);
-  if (!match || Number(match[1]) <= Date.now() ||
-      Number(match[1]) > Date.now() + adminSessionMaxAgeSeconds * 1000) return null;
+  // The signed expiry and shared-store TTL bound session lifetime. An upper
+  // bound relative to this instance's clock rejects valid freshly issued
+  // sessions (and skips revocation) when its clock is behind the issuer.
+  if (!match || Number(match[1]) <= Date.now()) return null;
   const expected = await sign(`${match[1]}.${match[2]}`, secret);
   return safeCompare(match[3], expected) ? match[2] : null;
 };

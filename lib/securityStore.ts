@@ -110,7 +110,8 @@ export class RedisSecurityStore implements SecurityStore {
 const globalStore = globalThis as typeof globalThis & { supportSecurityStore?: MemorySecurityStore };
 export const getSecurityStore = (): SecurityStore => {
   const mode = process.env.SECURITY_STORE || (process.env.NODE_ENV === 'production' ? 'redis' : 'memory');
-  if (mode === 'memory' && (process.env.NODE_ENV !== 'production' || process.env.SECURITY_SINGLE_PROCESS === 'true')) {
+  if (mode === 'memory' && process.env.VERCEL !== '1' &&
+      (process.env.NODE_ENV !== 'production' || process.env.SECURITY_SINGLE_PROCESS === 'true')) {
     return globalStore.supportSecurityStore ??= new MemorySecurityStore();
   }
   const url = process.env.SECURITY_REDIS_REST_URL;

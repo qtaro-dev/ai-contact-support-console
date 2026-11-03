@@ -21,6 +21,7 @@ beforeEach(() => {
   delete process.env.ADMIN_PASSWORD;
   delete process.env.ADMIN_SESSION_SECRET;
   delete process.env.APP_ORIGIN;
+  delete process.env.VERCEL;
   (globalThis as typeof globalThis & { supportSecurityStore?: MemorySecurityStore }).supportSecurityStore = new MemorySecurityStore();
 });
 
@@ -193,6 +194,27 @@ test('session tampering, trailing segments and password rotation invalidate cook
   assert.equal(await isValidAdminSession(session), false);
 });
 
+test('signed sessions tolerate a verifier clock slightly behind the issuing instance', async () => {
+  credentials();
+  const session = (await createAdminSessionValue())!;
+  const verifierTime = Date.now() - 2000;
+  mock.method(Date, 'now', () => verifierTime);
+  assert.equal(await isValidAdminSession(session), true);
+  const response = await logout(new NextRequest('http://localhost/api/admin-logout', {
+    method: 'POST', headers: { cookie: `admin_session=${session}` }
+  }));
+  assert.equal(response.status, 303);
+  assert.equal(await isValidAdminSession(session), false);
+});
+
+test('expired signed sessions remain invalid', async () => {
+  credentials();
+  const session = (await createAdminSessionValue())!;
+  const afterExpiry = Number(session.split('.')[0]) + 1;
+  mock.method(Date, 'now', () => afterExpiry);
+  assert.equal(await isValidAdminSession(session), false);
+});
+
 test('unexpected internal configuration errors are not returned or logged verbatim', async () => {
   process.env.AI_PROVIDER = 'private-provider-detail';
   const logger = mock.method(console, 'error', () => {});
@@ -230,6 +252,12 @@ test('production rejects process-local storage unless single process is explicit
     if (previous === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
     else Object.assign(process.env, { NODE_ENV: previous });
   }
+});
+
+test('Vercel refuses process-local storage even with the local single-process opt-in', () => {
+  process.env.VERCEL = '1';
+  process.env.SECURITY_SINGLE_PROCESS = 'true';
+  assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
 });
 
 test('Ollama failures remain generic with a mocked upstream and no response logging', async () => {
