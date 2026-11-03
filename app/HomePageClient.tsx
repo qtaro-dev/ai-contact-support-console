@@ -10,6 +10,7 @@ import {
 } from '@/lib/chatUiText';
 import type { AiModeDisplay } from '@/lib/appSettings';
 import { harassmentCategoryLabels } from '@/lib/customerHarassment';
+import { securityPolicy } from '@/lib/securityPolicy';
 
 type InquiryHistoryItem = {
   id: string;
@@ -99,8 +100,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
 
       setInquiries((prevInquiries) => [newInquiry, ...prevInquiries]);
       setSelectedInquiryId(newInquiry.id);
-    } catch (error) {
-      console.error(error);
+    } catch {
       alert(chatUiText.requestFailedMessage);
     } finally {
       setLoading(false);
@@ -138,6 +138,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
                 <span className="font-bold">{chatUiText.userNameLabel}</span>
                 <input
                   value={userName}
+                  maxLength={100}
                   onChange={(event) => setUserName(event.target.value)}
                   placeholder={chatUiText.userNamePlaceholder}
                   className="w-full rounded-lg border border-gray-700 p-3 text-black focus:text-black"
@@ -149,6 +150,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
                   type="text"
                   inputMode="email"
                   value={email}
+                  maxLength={254}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder={chatUiText.emailPlaceholder}
                   className="w-full rounded-lg border border-gray-700 p-3 text-black focus:text-black"
@@ -160,6 +162,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
               <input
                 ref={inputRef}
                 value={inputValue}
+                maxLength={securityPolicy.messageMaxChars}
                 onChange={handleInputChange}
                 placeholder={chatUiText.inputPlaceholder}
                 className="mr-2 w-full rounded-lg border border-gray-700 p-3 text-black focus:text-black"
@@ -261,6 +264,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
                 : 'border-slate-200'
             }`}
           >
+            <p className="text-sm text-gray-700">{chatUiText.assessmentNotice}</p>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-bold text-gray-950">{chatUiText.harassmentCardTitle}</h2>
               {selectedInquiry ? (

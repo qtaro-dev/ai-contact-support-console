@@ -1,4 +1,5 @@
 import { adminLoginUiText } from '@/lib/chatUiText';
+import { getSafeRedirectPath } from '@/lib/securityPolicy';
 
 type AdminLoginPageProps = {
   searchParams: Promise<{
@@ -22,7 +23,7 @@ const getErrorMessage = (error?: string) => {
 const AdminLoginPage = async ({ searchParams }: AdminLoginPageProps) => {
   const params = await searchParams;
   const errorMessage = getErrorMessage(params.error);
-  const redirectPath = params.redirect?.startsWith('/') ? params.redirect : '/admin';
+  const redirectPath = getSafeRedirectPath(params.redirect);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-6 py-8">

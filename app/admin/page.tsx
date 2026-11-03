@@ -6,7 +6,7 @@ import {
   riskLevelLabels
 } from '@/lib/chatUiText';
 import { harassmentTypeLabels } from '@/lib/customerHarassment';
-import { mockInquiryRecords } from '@/app/admin/mockData';
+import { getAdminInquiries } from '@/lib/adminData';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +29,7 @@ const truncateText = (value: string | null, maxLength: number) => {
 };
 
 const AdminPage = async () => {
-  const inquiries = mockInquiryRecords;
+  const inquiries = await getAdminInquiries();
 
   return (
     <div className="min-h-screen bg-slate-100">

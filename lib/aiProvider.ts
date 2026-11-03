@@ -1,5 +1,8 @@
 import { aiAnswerSystemPrompt } from '@/lib/ollamaPrompt';
 import type { HarassmentAssessment } from '@/app/types';
+import { aiProviderText } from '@/lib/chatUiText';
+import { ApiError, readLimitedBody } from '@/lib/apiSecurity';
+import { securityPolicy } from '@/lib/securityPolicy';
 
 export type AiProvider = 'ollama' | 'demo';
 
@@ -26,7 +29,7 @@ const defaultOllamaModel = 'qwen2.5-coder:7b';
 const demoModel = 'demo-template';
 
 const buildSystemPrompt = (maxOutputChars: number) =>
-  `${aiAnswerSystemPrompt}\n回答は最大${maxOutputChars}文字以内に収めてください。`;
+  `${aiAnswerSystemPrompt}\n${aiProviderText.outputLimit(maxOutputChars)}`;
 
 const getAiProvider = (): AiProvider => {
   const provider = (process.env.AI_PROVIDER || 'ollama').toLowerCase();
@@ -36,7 +39,7 @@ const getAiProvider = (): AiProvider => {
   }
 
   throw new AiConfigurationError(
-    'AI_PROVIDER は "ollama" または "demo" を指定してください。'
+    aiProviderText.invalidProvider
   );
 };
 
@@ -58,68 +61,67 @@ export const getAiGenerationConfig = (): AiGenerationConfig => {
 
 const getDemoAnswer = (assessment: HarassmentAssessment) => {
   if (assessment.categories.includes('self_harm')) {
-    return '安全確認が必要な内容です。緊急性がある場合は、すぐに周囲の人や公的な相談窓口、緊急窓口へつなぐ対応を検討してください。';
+    return aiProviderText.demo.selfHarm;
   }
 
   if (assessment.categories.includes('discriminatory_or_sexual')) {
-    return '問い合わせ内容に不適切な表現が含まれています。通常対応は行わず、内容を記録したうえで管理者確認に回してください。';
+    return aiProviderText.demo.sexual;
   }
 
   if (assessment.level === 'high') {
-    return '安全確保を優先する必要があります。対応者は単独判断を避け、管理者確認に回してください。必要に応じて対応を中断し、記録を残してください。';
+    return aiProviderText.demo.high;
   }
 
   if (assessment.level === 'medium') {
-    return 'ご不便をおかけして申し訳ありません。内容を確認し、事実関係を整理したうえで対応いたします。状況が分かる情報があればお知らせください。';
+    return aiProviderText.demo.medium;
   }
 
-  return 'お問い合わせありがとうございます。内容を確認し、必要に応じて担当者よりご連絡いたします。追加情報があれば、続けてお知らせください。';
+  return aiProviderText.demo.normal;
 };
 
-const getOllamaAnswer = async (message: string, model: string, maxOutputChars: number) => {
+const getOllamaAnswer = async (message: string, model: string, maxOutputChars: number, signal: AbortSignal) => {
   const apiBase =
     process.env.OLLAMA_API_BASE || process.env.OLLAMA_API_URL || 'http://localhost:11434';
   const systemPrompt = buildSystemPrompt(maxOutputChars);
 
-  const response = await fetch(`${apiBase}/api/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message }
-      ],
-      stream: false
-    })
-  });
+  try {
+    const response = await fetch(`${apiBase}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+        stream: false,
+        options: { num_predict: securityPolicy.ollamaMaxTokens }
+      }),
+      signal,
+      cache: 'no-store'
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const detail =
-      typeof errorData === 'object' && errorData !== null
-        ? 'error' in errorData
-          ? errorData.error
-          : 'detail' in errorData
-            ? errorData.detail
-            : response.statusText
-        : response.statusText;
+    if (!response.ok) {
+      void response.body?.cancel().catch(() => {});
+      throw new ApiError('generationFailed', 502);
+    }
 
-    throw new Error(`Failed to get response from Ollama: ${String(detail)}`);
+    const data = JSON.parse(await readLimitedBody(response, securityPolicy.ollamaResponseMaxBytes, signal));
+    const answer = data?.message?.content || data?.response;
+    if (typeof answer !== 'string' || !answer.trim()) throw new ApiError('generationFailed', 502);
+    return answer;
+  } catch {
+    throw new ApiError(signal.aborted ? 'timeout' : 'generationFailed', signal.aborted ? 504 : 502);
   }
-
-  const data = await response.json();
-  console.log('Ollama response:', data);
-
-  return data.message?.content || data.response || 'ローカルLLMから空の回答が返されました。';
 };
 
 export const generateAiAnswer = async (
   message: string,
   maxOutputChars: number,
-  assessment: HarassmentAssessment
+  assessment: HarassmentAssessment,
+  signal: AbortSignal = AbortSignal.timeout(securityPolicy.processingTimeoutMs)
 ): Promise<AiGenerationResult> => {
   const config = getAiGenerationConfig();
   const answer = await (async () => {
@@ -127,7 +129,7 @@ export const generateAiAnswer = async (
       return getDemoAnswer(assessment);
     }
 
-    return getOllamaAnswer(message, config.model, maxOutputChars);
+    return getOllamaAnswer(message, config.model, maxOutputChars, signal);
   })();
 
   return {
