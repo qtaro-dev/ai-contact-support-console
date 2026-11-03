@@ -12,6 +12,7 @@ import { getSecurityStore, MemorySecurityStore, RedisSecurityStore } from '@/lib
 import { assessCustomerHarassment } from '@/lib/customerHarassment';
 import { generateAiAnswer, getAiGenerationConfig } from '@/lib/aiProvider';
 import { aiProviderText } from '@/lib/chatUiText';
+import { proxy } from '@/proxy';
 
 beforeEach(() => {
   mock.restoreAll();
@@ -22,6 +23,10 @@ beforeEach(() => {
   delete process.env.ADMIN_SESSION_SECRET;
   delete process.env.APP_ORIGIN;
   delete process.env.VERCEL;
+  for (const name of ['SECURITY_REDIS_REST_URL', 'SECURITY_REDIS_REST_TOKEN',
+    'KV_REST_API_URL', 'KV_REST_API_TOKEN', 'KV_REST_API_READ_ONLY_TOKEN', 'KV_URL', 'REDIS_URL']) {
+    delete process.env[name];
+  }
   (globalThis as typeof globalThis & { supportSecurityStore?: MemorySecurityStore }).supportSecurityStore = new MemorySecurityStore();
 });
 
@@ -36,6 +41,145 @@ const credentials = () => {
 const loginRequest = (password: string, redirect = '/admin') => new NextRequest('http://localhost/api/admin-login', {
   method: 'POST', body: new URLSearchParams({ password, redirect }),
   headers: { origin: 'http://localhost' }
+});
+
+const configureKv = () => {
+  process.env.SECURITY_STORE = 'redis';
+  process.env.KV_REST_API_URL = 'https://kv-store.invalid';
+  process.env.KV_REST_API_TOKEN = randomBytes(32).toString('hex');
+};
+
+const expectRedisPair = (url: string, token: string) => mock.method(globalThis, 'fetch', async (
+  target: string | URL | Request, options?: RequestInit
+) => {
+  // Boolean assertions keep credential values out of failed-test output.
+  assert.ok(String(target) === url);
+  assert.ok(new Headers(options?.headers).get('authorization') === `Bearer ${token}`);
+  return Response.json({ result: 1 });
+});
+
+test('complete explicit Redis settings take precedence over the complete KV pair', async () => {
+  configureKv();
+  process.env.SECURITY_REDIS_REST_URL = 'https://explicit-store.invalid';
+  process.env.SECURITY_REDIS_REST_TOKEN = randomBytes(32).toString('hex');
+  const network = expectRedisPair(process.env.SECURITY_REDIS_REST_URL, process.env.SECURITY_REDIS_REST_TOKEN);
+  assert.equal(await getSecurityStore().consume('test:priority', 1, 100), true);
+  assert.equal(network.mock.callCount(), 1);
+});
+
+test('KV REST settings are used only when both explicit settings are absent', async () => {
+  configureKv();
+  const network = expectRedisPair(process.env.KV_REST_API_URL!, process.env.KV_REST_API_TOKEN!);
+  assert.equal(await getSecurityStore().consume('test:kv', 1, 100), true);
+  assert.equal(network.mock.callCount(), 1);
+});
+
+test('partial, empty or whitespace explicit settings fail closed despite a valid KV pair', () => {
+  configureKv();
+  const network = mock.method(globalThis, 'fetch', async () => { throw new Error('Unexpected fetch'); });
+  for (const [url, token] of [
+    ['https://explicit-store.invalid', undefined],
+    [undefined, randomBytes(32).toString('hex')],
+    ['', randomBytes(32).toString('hex')], ['https://explicit-store.invalid', ''],
+    ['', ''], [' ', ' ']
+  ]) {
+    delete process.env.SECURITY_REDIS_REST_URL;
+    delete process.env.SECURITY_REDIS_REST_TOKEN;
+    if (url !== undefined) process.env.SECURITY_REDIS_REST_URL = url;
+    if (token !== undefined) process.env.SECURITY_REDIS_REST_TOKEN = token;
+    assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
+  }
+  assert.equal(network.mock.callCount(), 0);
+});
+
+test('missing KV credentials never use read-only tokens or raw Redis connection URLs', () => {
+  process.env.SECURITY_STORE = 'redis';
+  process.env.KV_REST_API_READ_ONLY_TOKEN = randomBytes(32).toString('hex');
+  process.env.KV_URL = 'redis://raw-kv.invalid';
+  process.env.REDIS_URL = 'redis://raw-redis.invalid';
+  for (const [url, token] of [[undefined, undefined], ['https://kv-store.invalid', undefined],
+    [undefined, randomBytes(32).toString('hex')], ['https://kv-store.invalid', ''], [' ', ' ']]) {
+    delete process.env.KV_REST_API_URL;
+    delete process.env.KV_REST_API_TOKEN;
+    if (url !== undefined) process.env.KV_REST_API_URL = url;
+    if (token !== undefined) process.env.KV_REST_API_TOKEN = token;
+    assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
+  }
+});
+
+test('URL and token from different setting families are never combined', () => {
+  process.env.SECURITY_STORE = 'redis';
+  process.env.SECURITY_REDIS_REST_URL = 'https://explicit-store.invalid';
+  process.env.KV_REST_API_TOKEN = randomBytes(32).toString('hex');
+  assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
+  delete process.env.SECURITY_REDIS_REST_URL;
+  delete process.env.KV_REST_API_TOKEN;
+  process.env.SECURITY_REDIS_REST_TOKEN = randomBytes(32).toString('hex');
+  process.env.KV_REST_API_URL = 'https://kv-store.invalid';
+  assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
+});
+
+test('KV fallback retains HTTPS and URL credential validation', () => {
+  configureKv();
+  for (const url of ['http://kv-store.invalid', 'redis://kv-store.invalid',
+    'https://user:password@kv-store.invalid', 'https://kv-store.invalid?token=invalid',
+    'https://kv-store.invalid#fragment']) {
+    process.env.KV_REST_API_URL = url;
+    assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
+  }
+});
+
+test('production default uses KV Redis with demo answers and no AI fetch', async () => {
+  configureKv();
+  const previous = process.env.NODE_ENV;
+  try {
+    Object.assign(process.env, { NODE_ENV: 'production', VERCEL: '1' });
+    delete process.env.SECURITY_STORE;
+    const network = expectRedisPair(process.env.KV_REST_API_URL!, process.env.KV_REST_API_TOKEN!);
+    const response = await chat(chatRequest('{"message":"配送状況を教えてください"}'));
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).answer, aiProviderText.demo.normal);
+    assert.ok(network.mock.callCount() > 0);
+  } finally {
+    if (previous === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+    else Object.assign(process.env, { NODE_ENV: previous });
+  }
+});
+
+test('KV Redis outages deny chat, login, protected pages and logout without credential logging', async () => {
+  credentials();
+  const session = (await createAdminSessionValue())!;
+  configureKv();
+  const logger = mock.method(console, 'error', () => {});
+  mock.method(globalThis, 'fetch', async () => { throw new Error('private upstream details'); });
+  const responses = [
+    await chat(chatRequest('{"message":"private inquiry"}')),
+    await login(loginRequest(process.env.ADMIN_PASSWORD!)),
+    await proxy(new NextRequest('http://localhost/admin', { headers: { cookie: `admin_session=${session}` } })),
+    await logout(new NextRequest('http://localhost/api/admin-logout', {
+      method: 'POST', headers: { cookie: `admin_session=${session}` }
+    }))
+  ];
+  for (const response of responses) {
+    assert.equal(response.status, 503);
+    const data = await response.json();
+    assert.deepEqual(Object.keys(data).sort(), ['code', 'error']);
+    assert.equal(data.code, 'unavailable');
+  }
+  const logged = JSON.stringify(logger.mock.calls);
+  assert.ok(!logged.includes(process.env.KV_REST_API_TOKEN!));
+  assert.ok(!logged.includes(process.env.ADMIN_PASSWORD!));
+  assert.ok(!logged.includes(session));
+  assert.doesNotMatch(logged, /private|kv-store/);
+});
+
+test('unset or empty AI_PROVIDER keeps the existing Ollama default without contacting it', () => {
+  const network = mock.method(globalThis, 'fetch', async () => { throw new Error('Unexpected fetch'); });
+  delete process.env.AI_PROVIDER;
+  assert.equal(getAiGenerationConfig().provider, 'ollama');
+  process.env.AI_PROVIDER = '';
+  assert.equal(getAiGenerationConfig().provider, 'ollama');
+  assert.equal(network.mock.callCount(), 0);
 });
 
 test('demo answers and risk assessments work without any outbound fetch', async () => {

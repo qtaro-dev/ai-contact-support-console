@@ -50,6 +50,14 @@ test('independent clients share one atomic rate quota', { skip: !container }, as
   assert.equal(results.filter(Boolean).length, 5);
 });
 
+test('shared rate quota resets after its Redis expiry', { skip: !container }, async () => {
+  const key = `${prefix}:rate-expiry`;
+  assert.equal(await a.consume(key, 1, 2000), true);
+  assert.equal(await b.consume(key, 1, 2000), false);
+  await setTimeout(2100);
+  assert.equal(await b.consume(key, 1, 2000), true);
+});
+
 test('independent clients share concurrent leases, release and expiry', { skip: !container }, async () => {
   const key = `${prefix}:active`;
   const results = await Promise.all(Array.from({ length: 10 }, (_, i) =>

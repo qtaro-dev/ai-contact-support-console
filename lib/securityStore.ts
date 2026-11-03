@@ -114,9 +114,14 @@ export const getSecurityStore = (): SecurityStore => {
       (process.env.NODE_ENV !== 'production' || process.env.SECURITY_SINGLE_PROCESS === 'true')) {
     return globalStore.supportSecurityStore ??= new MemorySecurityStore();
   }
-  const url = process.env.SECURITY_REDIS_REST_URL;
-  const token = process.env.SECURITY_REDIS_REST_TOKEN;
-  if (mode !== 'redis' || !url || !token) throw new ApiError('unavailable', 503);
+  const explicitUrl = process.env.SECURITY_REDIS_REST_URL;
+  const explicitToken = process.env.SECURITY_REDIS_REST_TOKEN;
+  // Select one complete setting family. Even an explicitly empty/partial family
+  // is a configuration error, not permission to mix credentials or fall back.
+  const useExplicit = explicitUrl !== undefined || explicitToken !== undefined;
+  const url = useExplicit ? explicitUrl : process.env.KV_REST_API_URL;
+  const token = useExplicit ? explicitToken : process.env.KV_REST_API_TOKEN;
+  if (mode !== 'redis' || !url?.trim() || !token?.trim()) throw new ApiError('unavailable', 503);
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {

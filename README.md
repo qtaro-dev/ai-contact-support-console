@@ -49,19 +49,23 @@ npm run start -- --hostname 127.0.0.1
 | `ADMIN_PASSWORD` | 管理者の共有パスワード。未設定ではログイン不可。十分に強い値を環境側で管理 |
 | `ADMIN_SESSION_SECRET` | 32文字以上の署名鍵。未設定・短い場合はセッションを発行しない |
 | `SECURITY_STORE` | `redis`または`memory`。本番の既定`redis`、開発の既定`memory` |
-| `SECURITY_REDIS_REST_URL` | Upstash互換Redis RESTエンドポイント。HTTPS必須 |
-| `SECURITY_REDIS_REST_TOKEN` | Redis RESTトークン。読み書きとEVALが可能な権限が必要 |
+| `SECURITY_REDIS_REST_URL` | 優先設定系統のRedis RESTエンドポイント。HTTPS必須。同じ系統のトークンと対で設定 |
+| `SECURITY_REDIS_REST_TOKEN` | 優先設定系統のRedis RESTトークン。読み書きとEVALが可能な権限が必要 |
+| `KV_REST_API_URL` | 上記2変数が両方とも未登録の場合だけ使用する、Upstash連携のREST URL |
+| `KV_REST_API_TOKEN` | 同じKV系統の書き込み可能なRESTトークン。URLと対で使用 |
 | `SECURITY_SINGLE_PROCESS` | 単一プロセスの本番相当ローカル検証で`memory`を使う場合だけ`true`。Vercelでは許可されない |
 | `APP_ORIGIN` | 任意の固定公開origin（例：`https://your-domain.example`）。未設定時はリクエストのHostを使用。入口側でHostを検証すること |
 
 全インスタンスで同一のRedisデータベース、署名鍵、管理者パスワードを使用してください。ステージングと本番は別のRedisデータベースへ分離してください。
+
+Redis設定は系統ごとに選択します。`SECURITY_REDIS_REST_URL`または`SECURITY_REDIS_REST_TOKEN`が一つでも登録されていれば、両方とも同じ系統から取得します。片方だけ、空文字、空白だけの設定は503で拒否し、有効なKV系統があっても迂回しません。両方が未登録の場合のみ`KV_REST_API_URL`と`KV_REST_API_TOKEN`の対を使用します。`KV_REST_API_READ_ONLY_TOKEN`、`KV_URL`、`REDIS_URL`はこのRESTストアの接続情報として使用しません。読み取り専用トークンではセッション・制限の書き込みができません。
 
 VercelのPreviewとProductionでは、環境変数の適用先を分けて設定してください。PreviewにはProductionとは別のRedisデータベースと管理者認証情報を使い、`APP_ORIGIN`も検証に使用するPreviewの正規HTTPS URLへ合わせます。Production側の変数をPreviewのために上書きしないでください。Previewのデプロイ保護は維持し、認証された状態で検証します。既存Redisの利用可否、料金、契約の確認が済むまで、新しいサービスの作成や接続は行わないでください。
 
 ## 公開デモの構成
 
 1. `AI_PROVIDER=demo`を設定します。Ollamaサービスは公開デモの前提条件ではありません。
-2. `SECURITY_STORE=redis`とRedis RESTのURL・トークンを設定します。Redis EVALによる原子的処理で全インスタンスの回数・同時処理枠を共有します。
+2. `SECURITY_STORE=redis`とRedis RESTのURL・書き込み可能トークンを同じ系統で設定します。VercelのUpstash連携が`KV_REST_API_URL`と`KV_REST_API_TOKEN`を登録している場合、`SECURITY_REDIS_REST_*`の両方を未登録にしてその対を利用できます。Redis EVALによる原子的処理で全インスタンスの回数・同時処理枠を共有します。
 3. HTTPS、正規Hostの制限、適切な本文サイズ・接続数・リクエスト時間制限を入口のプロキシ／ホスティング側にも設定します。アプリ内制限だけで接続レベルのDoSは防げません。
 4. 管理画面を利用する場合だけ認証情報を設定します。固定デモデータの展示用共有認証であり、個人別アカウント・MFA・権限管理は実装していません。
 5. 共有ストアの障害・設定不足時、APIは503を返し、認可は失敗します。保護を解除して処理を継続しません。
