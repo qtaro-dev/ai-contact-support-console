@@ -19,17 +19,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
   static diagnostic event identifiers, timeouts and output limits. Never log
   request bodies, personal information, passwords, cookies or model responses.
 - Authorize protected data at its access point, in addition to Proxy checks.
-  Preserve cookie protections, redirect allowlists and shared-session revocation.
-- Redis is required for multiple instances/serverless. Never present process-local
-  limits or sessions as distributed protection. Fail closed when shared storage
-  is unavailable. `memory` in production requires an explicitly single-process
-  deployment and is primarily for loopback verification.
+  Preserve signed-cookie protections and redirect allowlists. Logout deletes
+  the browser cookie; copied cookies are not immediately revoked server-side.
+- Keep the portfolio demo free of Redis, databases and external shared stores.
+  Do not claim shared rate/concurrency limits or immediate cookie revocation.
 - Respect the lockfile; use `npm ci` for clean installs. Review official
   advisories and peer compatibility before updating. Do not use audit fix --force,
   unsafe major overrides or unrelated dependency/library replacements.
 - Run lint, typecheck, automated tests, a demo build and audit for security
-  changes. Add regression cases for security boundaries. Test shared store Lua
-  with `npm run test:redis` against a disposable Redis when changing it.
+  changes. Add regression cases for affected security boundaries. Do not add
+  Redis integration tests or independent verification tools.
 - Verify main forms and protected pages in a browser. Distinguish real services,
   local adapters and mocks in reports; do not claim untested fixes or features.
 - Keep environment files, secrets and generated artifacts out of Git. Document

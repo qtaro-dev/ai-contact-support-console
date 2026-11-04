@@ -10,7 +10,7 @@ export class ApiError extends Error {
   }
 }
 
-type SecurityEvent = ApiErrorCode | 'lease_release_failed' | 'authorization_store_unavailable';
+type SecurityEvent = ApiErrorCode | 'authorization_unavailable';
 export const logSecurityEvent = (event: SecurityEvent) => {
   // Only static event identifiers; never log exceptions or request/provider data.
   console.error(JSON.stringify({ event }));

@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
-    "test:redis": "tsx --test tests/redis.integration.ts"
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "next": "16.4.4",

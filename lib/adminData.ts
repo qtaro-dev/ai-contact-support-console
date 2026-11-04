@@ -11,7 +11,7 @@ export const requireAdmin = async (path: string) => {
   try {
     authenticated = await isValidAdminSession((await cookies()).get(adminSessionCookieName)?.value);
   } catch {
-    logSecurityEvent('authorization_store_unavailable');
+    logSecurityEvent('authorization_unavailable');
   }
   if (!authenticated) redirect(`${appPaths.login}?redirect=${encodeURIComponent(path)}`);
 };

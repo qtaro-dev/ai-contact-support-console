@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminSessionCookieName, createAdminSessionValue, getAdminCookieOptions, verifyAdminPassword } from '@/lib/adminAuth';
 import { ApiError, errorResponse, getRequestOrigin, readLimitedBody, verifyRequestOrigin } from '@/lib/apiSecurity';
-import { enforceRateLimit } from '@/lib/securityStore';
 import { appPaths, getSafeRedirectPath, securityPolicy } from '@/lib/securityPolicy';
 
 export async function POST(request: NextRequest) {
   try {
     verifyRequestOrigin(request);
-    await enforceRateLimit('login');
     if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/x-www-form-urlencoded') {
       throw new ApiError('unsupportedMediaType', 415);
     }

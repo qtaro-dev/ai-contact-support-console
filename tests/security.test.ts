@@ -8,7 +8,6 @@ import { POST as logout } from '@/app/api/admin-logout/route';
 import { createAdminSessionValue, isValidAdminSession, verifyAdminPassword, getAdminCookieOptions } from '@/lib/adminAuth';
 import { ApiError, readLimitedBody, withAbort } from '@/lib/apiSecurity';
 import { getSafeRedirectPath, securityPolicy } from '@/lib/securityPolicy';
-import { getSecurityStore, MemorySecurityStore, RedisSecurityStore } from '@/lib/securityStore';
 import { assessCustomerHarassment } from '@/lib/customerHarassment';
 import { generateAiAnswer, getAiGenerationConfig } from '@/lib/aiProvider';
 import { aiProviderText } from '@/lib/chatUiText';
@@ -17,17 +16,13 @@ import { proxy } from '@/proxy';
 beforeEach(() => {
   mock.restoreAll();
   process.env.AI_PROVIDER = 'demo';
-  process.env.SECURITY_STORE = 'memory';
-  process.env.SECURITY_SINGLE_PROCESS = 'true';
   delete process.env.ADMIN_PASSWORD;
   delete process.env.ADMIN_SESSION_SECRET;
   delete process.env.APP_ORIGIN;
   delete process.env.VERCEL;
-  for (const name of ['SECURITY_REDIS_REST_URL', 'SECURITY_REDIS_REST_TOKEN',
-    'KV_REST_API_URL', 'KV_REST_API_TOKEN', 'KV_REST_API_READ_ONLY_TOKEN', 'KV_URL', 'REDIS_URL']) {
-    delete process.env[name];
-  }
-  (globalThis as typeof globalThis & { supportSecurityStore?: MemorySecurityStore }).supportSecurityStore = new MemorySecurityStore();
+  delete process.env.OLLAMA_API_BASE;
+  delete process.env.OLLAMA_API_URL;
+  delete process.env.OLLAMA_MODEL;
 });
 
 const chatRequest = (body: string, headers: Record<string, string> = {}) =>
@@ -41,136 +36,6 @@ const credentials = () => {
 const loginRequest = (password: string, redirect = '/admin') => new NextRequest('http://localhost/api/admin-login', {
   method: 'POST', body: new URLSearchParams({ password, redirect }),
   headers: { origin: 'http://localhost' }
-});
-
-const configureKv = () => {
-  process.env.SECURITY_STORE = 'redis';
-  process.env.KV_REST_API_URL = 'https://kv-store.invalid';
-  process.env.KV_REST_API_TOKEN = randomBytes(32).toString('hex');
-};
-
-const expectRedisPair = (url: string, token: string) => mock.method(globalThis, 'fetch', async (
-  target: string | URL | Request, options?: RequestInit
-) => {
-  // Boolean assertions keep credential values out of failed-test output.
-  assert.ok(String(target) === url);
-  assert.ok(new Headers(options?.headers).get('authorization') === `Bearer ${token}`);
-  return Response.json({ result: 1 });
-});
-
-test('complete explicit Redis settings take precedence over the complete KV pair', async () => {
-  configureKv();
-  process.env.SECURITY_REDIS_REST_URL = 'https://explicit-store.invalid';
-  process.env.SECURITY_REDIS_REST_TOKEN = randomBytes(32).toString('hex');
-  const network = expectRedisPair(process.env.SECURITY_REDIS_REST_URL, process.env.SECURITY_REDIS_REST_TOKEN);
-  assert.equal(await getSecurityStore().consume('test:priority', 1, 100), true);
-  assert.equal(network.mock.callCount(), 1);
-});
-
-test('KV REST settings are used only when both explicit settings are absent', async () => {
-  configureKv();
-  const network = expectRedisPair(process.env.KV_REST_API_URL!, process.env.KV_REST_API_TOKEN!);
-  assert.equal(await getSecurityStore().consume('test:kv', 1, 100), true);
-  assert.equal(network.mock.callCount(), 1);
-});
-
-test('partial, empty or whitespace explicit settings fail closed despite a valid KV pair', () => {
-  configureKv();
-  const network = mock.method(globalThis, 'fetch', async () => { throw new Error('Unexpected fetch'); });
-  for (const [url, token] of [
-    ['https://explicit-store.invalid', undefined],
-    [undefined, randomBytes(32).toString('hex')],
-    ['', randomBytes(32).toString('hex')], ['https://explicit-store.invalid', ''],
-    ['', ''], [' ', ' ']
-  ]) {
-    delete process.env.SECURITY_REDIS_REST_URL;
-    delete process.env.SECURITY_REDIS_REST_TOKEN;
-    if (url !== undefined) process.env.SECURITY_REDIS_REST_URL = url;
-    if (token !== undefined) process.env.SECURITY_REDIS_REST_TOKEN = token;
-    assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
-  }
-  assert.equal(network.mock.callCount(), 0);
-});
-
-test('missing KV credentials never use read-only tokens or raw Redis connection URLs', () => {
-  process.env.SECURITY_STORE = 'redis';
-  process.env.KV_REST_API_READ_ONLY_TOKEN = randomBytes(32).toString('hex');
-  process.env.KV_URL = 'redis://raw-kv.invalid';
-  process.env.REDIS_URL = 'redis://raw-redis.invalid';
-  for (const [url, token] of [[undefined, undefined], ['https://kv-store.invalid', undefined],
-    [undefined, randomBytes(32).toString('hex')], ['https://kv-store.invalid', ''], [' ', ' ']]) {
-    delete process.env.KV_REST_API_URL;
-    delete process.env.KV_REST_API_TOKEN;
-    if (url !== undefined) process.env.KV_REST_API_URL = url;
-    if (token !== undefined) process.env.KV_REST_API_TOKEN = token;
-    assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
-  }
-});
-
-test('URL and token from different setting families are never combined', () => {
-  process.env.SECURITY_STORE = 'redis';
-  process.env.SECURITY_REDIS_REST_URL = 'https://explicit-store.invalid';
-  process.env.KV_REST_API_TOKEN = randomBytes(32).toString('hex');
-  assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
-  delete process.env.SECURITY_REDIS_REST_URL;
-  delete process.env.KV_REST_API_TOKEN;
-  process.env.SECURITY_REDIS_REST_TOKEN = randomBytes(32).toString('hex');
-  process.env.KV_REST_API_URL = 'https://kv-store.invalid';
-  assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
-});
-
-test('KV fallback retains HTTPS and URL credential validation', () => {
-  configureKv();
-  for (const url of ['http://kv-store.invalid', 'redis://kv-store.invalid',
-    'https://user:password@kv-store.invalid', 'https://kv-store.invalid?token=invalid',
-    'https://kv-store.invalid#fragment']) {
-    process.env.KV_REST_API_URL = url;
-    assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
-  }
-});
-
-test('production default uses KV Redis with demo answers and no AI fetch', async () => {
-  configureKv();
-  const previous = process.env.NODE_ENV;
-  try {
-    Object.assign(process.env, { NODE_ENV: 'production', VERCEL: '1' });
-    delete process.env.SECURITY_STORE;
-    const network = expectRedisPair(process.env.KV_REST_API_URL!, process.env.KV_REST_API_TOKEN!);
-    const response = await chat(chatRequest('{"message":"配送状況を教えてください"}'));
-    assert.equal(response.status, 200);
-    assert.equal((await response.json()).answer, aiProviderText.demo.normal);
-    assert.ok(network.mock.callCount() > 0);
-  } finally {
-    if (previous === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
-    else Object.assign(process.env, { NODE_ENV: previous });
-  }
-});
-
-test('KV Redis outages deny chat, login, protected pages and logout without credential logging', async () => {
-  credentials();
-  const session = (await createAdminSessionValue())!;
-  configureKv();
-  const logger = mock.method(console, 'error', () => {});
-  mock.method(globalThis, 'fetch', async () => { throw new Error('private upstream details'); });
-  const responses = [
-    await chat(chatRequest('{"message":"private inquiry"}')),
-    await login(loginRequest(process.env.ADMIN_PASSWORD!)),
-    await proxy(new NextRequest('http://localhost/admin', { headers: { cookie: `admin_session=${session}` } })),
-    await logout(new NextRequest('http://localhost/api/admin-logout', {
-      method: 'POST', headers: { cookie: `admin_session=${session}` }
-    }))
-  ];
-  for (const response of responses) {
-    assert.equal(response.status, 503);
-    const data = await response.json();
-    assert.deepEqual(Object.keys(data).sort(), ['code', 'error']);
-    assert.equal(data.code, 'unavailable');
-  }
-  const logged = JSON.stringify(logger.mock.calls);
-  assert.ok(!logged.includes(process.env.KV_REST_API_TOKEN!));
-  assert.ok(!logged.includes(process.env.ADMIN_PASSWORD!));
-  assert.ok(!logged.includes(session));
-  assert.doesNotMatch(logged, /private|kv-store/);
 });
 
 test('unset or empty AI_PROVIDER keeps the existing Ollama default without contacting it', () => {
@@ -234,41 +99,6 @@ test('reject foreign origins and unsupported content types', async () => {
   }))).status, 200);
 });
 
-test('API rate limit cannot be bypassed with spoofed forwarded headers', async () => {
-  for (let i = 0; i < securityPolicy.chatRequestsPerMinute; i++) {
-    assert.equal((await chat(chatRequest('{"message":"ok"}', { 'x-forwarded-for': `192.0.2.${i}` }))).status, 200);
-  }
-  const response = await chat(chatRequest('{"message":"ok"}'));
-  assert.equal(response.status, 429);
-  assert.equal(response.headers.get('retry-after'), '60');
-});
-
-test('concurrent processing cap rejects work and release restores capacity', async () => {
-  const store = getSecurityStore();
-  const leases = await Promise.all(Array.from({ length: securityPolicy.concurrentChats }, () =>
-    store.acquire('chat:active', securityPolicy.concurrentChats, securityPolicy.leaseMs)));
-  const response = await chat(chatRequest('{"message":"ok"}'));
-  assert.equal(response.status, 503);
-  assert.equal((await response.json()).code, 'busy');
-  await store.release('chat:active', leases[0]!);
-  assert.equal((await chat(chatRequest('{"message":"ok"}'))).status, 200);
-});
-
-test('limits and leases expire; sessions can be explicitly revoked', async () => {
-  let now = 1000;
-  const store = new MemorySecurityStore(() => now);
-  assert.equal(await store.consume('rate', 1, 100), true);
-  assert.equal(await store.consume('rate', 1, 100), false);
-  const lease = await store.acquire('active', 1, 100);
-  assert.ok(lease);
-  assert.equal(await store.acquire('active', 1, 100), null);
-  await store.put('session', 100);
-  now += 101;
-  assert.equal(await store.consume('rate', 1, 100), true);
-  assert.ok(await store.acquire('active', 1, 100));
-  assert.equal(await store.has('session'), false);
-});
-
 test('body reading and processing deadlines terminate pending promises', async () => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10);
@@ -302,19 +132,19 @@ test('successful login preserves cookie protections and only safe redirect desti
   }));
   assert.equal(out.status, 303);
   assert.match(out.headers.get('set-cookie')!, /Max-Age=0/i);
-  assert.equal(await isValidAdminSession(value), false, 'copied cookie must also be revoked');
+  // Stateless logout deletes the browser cookie; copied cookies remain valid.
+  assert.equal(await isValidAdminSession(value), true);
+  assert.equal((await proxy(new NextRequest('http://localhost/admin'))).status, 307);
+  assert.equal((await proxy(new NextRequest('http://localhost/admin', { headers: { cookie: `admin_session=${value}` } }))).headers.get('x-middleware-next'), '1');
   assert.equal(getAdminCookieOptions().httpOnly, true);
 });
 
-test('failed login is rejected and all attempts are globally rate limited', async () => {
+test('failed login is rejected without issuing a session', async () => {
   credentials();
-  for (let i = 0; i < securityPolicy.loginAttemptsPerWindow; i++) {
-    const response = await login(loginRequest('wrong'));
-    assert.equal(response.status, 303);
-    assert.match(response.headers.get('location')!, /error=1/);
-    assert.equal(response.headers.has('set-cookie'), false);
-  }
-  assert.equal((await login(loginRequest(process.env.ADMIN_PASSWORD!))).status, 429);
+  const response = await login(loginRequest('wrong'));
+  assert.equal(response.status, 303);
+  assert.match(response.headers.get('location')!, /error=1/);
+  assert.equal(response.headers.has('set-cookie'), false);
 });
 
 test('redirect allowlist rejects backslashes, encoded paths, relative URLs and normalization tricks', async () => {
@@ -348,7 +178,7 @@ test('signed sessions tolerate a verifier clock slightly behind the issuing inst
     method: 'POST', headers: { cookie: `admin_session=${session}` }
   }));
   assert.equal(response.status, 303);
-  assert.equal(await isValidAdminSession(session), false);
+  assert.equal(await isValidAdminSession(session), true);
 });
 
 test('expired signed sessions remain invalid', async () => {
@@ -367,41 +197,6 @@ test('unexpected internal configuration errors are not returned or logged verbat
   const body = await response.text();
   assert.doesNotMatch(body, /private-provider|AI_PROVIDER|detail|stack|sensitive/);
   assert.doesNotMatch(JSON.stringify(logger.mock.calls), /private-provider|AI_PROVIDER|sensitive/);
-});
-
-test('Redis errors fail closed without exposing the token or response', async () => {
-  const logger = mock.method(console, 'error', () => {});
-  const network = mock.method(globalThis, 'fetch', async () => new Response('{"error":"sensitive upstream detail"}', { status: 200 }));
-  const store = new RedisSecurityStore('https://store.invalid', randomBytes(32).toString('hex'));
-  await assert.rejects(store.consume('rate', 1, 100), (e: unknown) => e instanceof ApiError && e.status === 503);
-  assert.equal(network.mock.callCount(), 1);
-  assert.equal(logger.mock.callCount(), 0);
-});
-
-test('production rejects process-local storage unless single process is explicit', async () => {
-  const previous = process.env.NODE_ENV;
-  const logger = mock.method(console, 'error', () => {});
-  try {
-    Object.assign(process.env, { NODE_ENV: 'production' });
-    delete process.env.SECURITY_SINGLE_PROCESS;
-    assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
-    assert.equal((await chat(chatRequest('{"message":"ok"}'))).status, 503);
-    assert.equal(getAdminCookieOptions().secure, true);
-    process.env.SECURITY_STORE = 'redis';
-    delete process.env.SECURITY_REDIS_REST_URL;
-    delete process.env.SECURITY_REDIS_REST_TOKEN;
-    assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
-    assert.equal(logger.mock.callCount(), 1);
-  } finally {
-    if (previous === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
-    else Object.assign(process.env, { NODE_ENV: previous });
-  }
-});
-
-test('Vercel refuses process-local storage even with the local single-process opt-in', () => {
-  process.env.VERCEL = '1';
-  process.env.SECURITY_SINGLE_PROCESS = 'true';
-  assert.throws(getSecurityStore, (e: unknown) => e instanceof ApiError && e.status === 503);
 });
 
 test('Ollama failures remain generic with a mocked upstream and no response logging', async () => {
@@ -441,4 +236,38 @@ test('representative regex limitations remain visible rather than claiming conte
   assert.equal(assessCustomerHarassment('法的権利として訴えることを検討します').level, 'low');
   // Spaced threat text can be missed (false negative).
   assert.equal(assessCustomerHarassment('こ ろ す').level, 'none');
+});
+
+
+test('Vercel production demo and signed sessions work without any shared store or fetch', async () => {
+  const previous = process.env.NODE_ENV;
+  const network = mock.method(globalThis, 'fetch', async () => { throw new Error('Unexpected network'); });
+  try {
+    Object.assign(process.env, { NODE_ENV: 'production', VERCEL: '1' });
+    credentials();
+    const response = await chat(chatRequest('{"message":"営業時間を教えてください。"}'));
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).answer, aiProviderText.demo.normal);
+    const signed = await createAdminSessionValue();
+    assert.ok(signed);
+    assert.equal(await isValidAdminSession(signed), true);
+    assert.equal(getAdminCookieOptions().secure, true);
+    assert.equal(network.mock.callCount(), 0);
+  } finally {
+    if (previous === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+    else Object.assign(process.env, { NODE_ENV: previous });
+  }
+});
+
+test('Ollama API route still works without a shared store using only a mock', async () => {
+  process.env.AI_PROVIDER = 'ollama';
+  process.env.OLLAMA_API_BASE = 'http://ollama.invalid';
+  const network = mock.method(globalThis, 'fetch', async (url: unknown) => {
+    assert.equal(String(url), 'http://ollama.invalid/api/chat');
+    return Response.json({ message: { content: 'mock answer' } });
+  });
+  const response = await chat(chatRequest('{"message":"営業時間を教えてください。"}'));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).answer, 'mock answer');
+  assert.equal(network.mock.callCount(), 1);
 });
