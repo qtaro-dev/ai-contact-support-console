@@ -63,7 +63,32 @@ export const chatUiText = {
   noCategoryLabel: '該当なし',
   riskHistoryLabel: 'リスク',
   requestErrorPrefix: 'エラー',
-  requestFailedMessage: 'ローカルLLMからの回答取得に失敗しました'
+  requestFailedMessage: '回答の取得に失敗しました。時間をおいて再度お試しください。',
+  assessmentNotice: '自動評価は参考情報です。正当な苦情や権利の行使をカスハラと確定するものではありません。誤検知・見逃しがあるため、最終判断は人が行ってください。'
+};
+
+export const apiErrorText = {
+  invalidRequest: '入力内容またはリクエスト形式を確認してください。',
+  tooLarge: '入力内容が上限を超えています。短くして再度お試しください。',
+  unsupportedMediaType: '対応していないリクエスト形式です。',
+  forbidden: 'このリクエストは許可されていません。',
+  rateLimited: '利用回数の上限に達しました。時間をおいて再度お試しください。',
+  busy: '現在処理が混み合っています。時間をおいて再度お試しください。',
+  timeout: '処理がタイムアウトしました。時間をおいて再度お試しください。',
+  unavailable: '現在サービスを利用できません。時間をおいて再度お試しください。',
+  generationFailed: '回答の取得に失敗しました。時間をおいて再度お試しください。'
+};
+
+export const aiProviderText = {
+  invalidProvider: 'AI_PROVIDER は "ollama" または "demo" を指定してください。',
+  outputLimit: (maxChars: number) => `回答は最大${maxChars}文字以内に収めてください。`,
+  demo: {
+    selfHarm: '安全確認が必要な内容です。緊急性がある場合は、すぐに周囲の人や公的な相談窓口、緊急窓口へつなぐ対応を検討してください。',
+    sexual: '問い合わせ内容に不適切な表現が含まれています。通常対応は行わず、内容を記録したうえで管理者確認に回してください。',
+    high: '安全確保を優先する必要があります。対応者は単独判断を避け、管理者確認に回してください。必要に応じて対応を中断し、記録を残してください。',
+    medium: 'ご不便をおかけして申し訳ありません。内容を確認し、事実関係を整理したうえで対応いたします。状況が分かる情報があればお知らせください。',
+    normal: 'お問い合わせありがとうございます。内容を確認し、必要に応じて担当者よりご連絡いたします。追加情報があれば、続けてお知らせください。'
+  }
 };
 
 export const adminUiText = {
@@ -116,7 +141,7 @@ export const settingsUiText = {
 export const aiModeText = {
   demo: {
     label: 'AI-KEY無し demoモード',
-    description: 'demoモードでは外部APIを呼ばず、固定テンプレート回答とカスハラ判定で動作します。'
+    description: 'demoモードでは外部AI APIやOllamaを呼ばず、固定テンプレート回答とカスハラ判定で動作します。'
   },
   ollama: {
     label: 'Ollama接続 / ローカル実行',

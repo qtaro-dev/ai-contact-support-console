@@ -1,100 +1,56 @@
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+
 export const adminSessionCookieName = 'admin_session';
 export const adminSessionMaxAgeSeconds = 60 * 60 * 12;
-
-// Portfolio/demo-only admin auth. Replace with full account authentication before production use.
 const textEncoder = new TextEncoder();
 
 const getAdminSessionSecret = () => {
   const secret = process.env.ADMIN_SESSION_SECRET;
-
-  if (!secret) {
-    console.warn('ADMIN_SESSION_SECRET is not set. Admin authentication is disabled.');
-    return null;
-  }
-
-  return secret;
+  return secret && secret.length >= 32 ? secret : null;
 };
-
 const getAdminPassword = () => process.env.ADMIN_PASSWORD || null;
-
-const toHex = (bytes: ArrayBuffer) =>
-  Array.from(new Uint8Array(bytes))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
 
 const sign = async (payload: string, secret: string) => {
   const key = await crypto.subtle.importKey(
-    'raw',
-    textEncoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
+    'raw', textEncoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
-  const signature = await crypto.subtle.sign('HMAC', key, textEncoder.encode(payload));
-
-  return toHex(signature);
+  // Password rotation also invalidates previously signed sessions.
+  const passwordDigest = createHash('sha256').update(getAdminPassword() || '').digest('hex');
+  const signature = await crypto.subtle.sign('HMAC', key, textEncoder.encode(`${payload}.${passwordDigest}`));
+  return Buffer.from(signature).toString('hex');
 };
 
-const safeCompare = (left: string, right: string) => {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  let mismatch = 0;
-
-  for (let index = 0; index < left.length; index += 1) {
-    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index);
-  }
-
-  return mismatch === 0;
-};
+const safeCompare = (left: string, right: string) =>
+  timingSafeEqual(createHash('sha256').update(left).digest(), createHash('sha256').update(right).digest());
 
 export const verifyAdminPassword = (password: string) => {
   const configuredPassword = getAdminPassword();
-
-  if (!configuredPassword) {
-    return false;
-  }
-
-  return safeCompare(password, configuredPassword);
+  return Boolean(configuredPassword && safeCompare(password, configuredPassword));
 };
 
 export const createAdminSessionValue = async () => {
   const secret = getAdminSessionSecret();
-
-  if (!secret) {
-    return null;
-  }
-
+  if (!secret || !getAdminPassword()) return null;
   const expiresAt = Date.now() + adminSessionMaxAgeSeconds * 1000;
-  const payload = String(expiresAt);
+  const sessionId = randomUUID();
+  const payload = `${expiresAt}.${sessionId}`;
   const signature = await sign(payload, secret);
-
   return `${payload}.${signature}`;
 };
 
-export const isValidAdminSession = async (sessionValue: string | undefined) => {
+const verifiedSessionId = async (sessionValue: string | undefined) => {
   const secret = getAdminSessionSecret();
+  if (!secret || !getAdminPassword() || !sessionValue || sessionValue.length > 160) return null;
+  const match = /^(\d{13})\.([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.([0-9a-f]{64})$/.exec(sessionValue);
+  // Verify the signed expiry without an upper bound relative to this
+  // instance's clock, which may be slightly behind the issuing instance.
+  if (!match || Number(match[1]) <= Date.now()) return null;
+  const expected = await sign(`${match[1]}.${match[2]}`, secret);
+  return safeCompare(match[3], expected) ? match[2] : null;
+};
 
-  if (!secret || !sessionValue) {
-    return false;
-  }
-
-  const [expiresAtText, signature] = sessionValue.split('.');
-
-  if (!expiresAtText || !signature) {
-    return false;
-  }
-
-  const expiresAt = Number(expiresAtText);
-
-  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
-    return false;
-  }
-
-  const expectedSignature = await sign(expiresAtText, secret);
-
-  return safeCompare(signature, expectedSignature);
+export const isValidAdminSession = async (sessionValue: string | undefined) => {
+  return (await verifiedSessionId(sessionValue)) !== null;
 };
 
 export const getAdminCookieOptions = () => ({

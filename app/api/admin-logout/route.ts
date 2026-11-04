@@ -1,18 +1,17 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { adminSessionCookieName } from '@/lib/adminAuth';
+import { NextResponse, type NextRequest } from 'next/server';
+import { adminSessionCookieName, getAdminCookieOptions } from '@/lib/adminAuth';
+import { errorResponse, getRequestOrigin, verifyRequestOrigin } from '@/lib/apiSecurity';
+import { appPaths } from '@/lib/securityPolicy';
 
 export async function POST(request: NextRequest) {
-  const response = NextResponse.redirect(new URL('/admin-login', request.url), {
-    status: 303
-  });
-  response.cookies.set(adminSessionCookieName, '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 0
-  });
-
-  return response;
+  try {
+    verifyRequestOrigin(request);
+    const response = NextResponse.redirect(new URL(appPaths.login, getRequestOrigin(request)), {
+      status: 303, headers: { 'Cache-Control': 'no-store' }
+    });
+    response.cookies.set(adminSessionCookieName, '', { ...getAdminCookieOptions(), maxAge: 0 });
+    return response;
+  } catch (error) {
+    return errorResponse(error);
+  }
 }

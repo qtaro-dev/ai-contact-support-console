@@ -10,6 +10,7 @@ import {
 } from '@/lib/chatUiText';
 import type { AiModeDisplay } from '@/lib/appSettings';
 import { harassmentCategoryLabels } from '@/lib/customerHarassment';
+import { securityPolicy } from '@/lib/securityPolicy';
 
 type InquiryHistoryItem = {
   id: string;
@@ -99,8 +100,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
 
       setInquiries((prevInquiries) => [newInquiry, ...prevInquiries]);
       setSelectedInquiryId(newInquiry.id);
-    } catch (error) {
-      console.error(error);
+    } catch {
       alert(chatUiText.requestFailedMessage);
     } finally {
       setLoading(false);
@@ -116,7 +116,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
 
   return (
     <div className="flex min-h-screen flex-col items-center bg-slate-100">
-      <header className="sticky top-0 z-10 mb-8 w-full max-w-md bg-white p-4 shadow-lg">
+      <header className="mb-8 w-full max-w-md bg-white p-4 shadow-lg">
         <h1 className="text-3xl font-bold text-gray-950">{chatUiText.headerTitle}</h1>
         <p className="text-gray-700">{chatUiText.headerDescription}</p>
         <div className="flex items-center space-x-4">
@@ -129,7 +129,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
         </div>
       </header>
       <main className="mx-auto w-full max-w-7xl px-6 py-8">
-        <div className="sticky top-4 z-20 space-y-6 rounded-xl bg-white p-6 shadow">
+        <div className="space-y-6 rounded-xl bg-white p-6 shadow">
           <h2 className="mb-4 text-xl font-bold text-gray-950">{chatUiText.inputTitle}</h2>
           <p className="text-black">{chatUiText.inputDescription}</p>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -138,6 +138,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
                 <span className="font-bold">{chatUiText.userNameLabel}</span>
                 <input
                   value={userName}
+                  maxLength={100}
                   onChange={(event) => setUserName(event.target.value)}
                   placeholder={chatUiText.userNamePlaceholder}
                   className="w-full rounded-lg border border-gray-700 p-3 text-black focus:text-black"
@@ -149,6 +150,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
                   type="text"
                   inputMode="email"
                   value={email}
+                  maxLength={254}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder={chatUiText.emailPlaceholder}
                   className="w-full rounded-lg border border-gray-700 p-3 text-black focus:text-black"
@@ -160,6 +162,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
               <input
                 ref={inputRef}
                 value={inputValue}
+                maxLength={securityPolicy.messageMaxChars}
                 onChange={handleInputChange}
                 placeholder={chatUiText.inputPlaceholder}
                 className="mr-2 w-full rounded-lg border border-gray-700 p-3 text-black focus:text-black"
@@ -195,7 +198,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
         <div className="mt-8 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)_360px]">
           <aside className="space-y-6 rounded-xl bg-white p-5 shadow">
             <h2 className="text-lg font-bold text-gray-950">{chatUiText.historyTitle}</h2>
-            <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+            <div className="space-y-4 pr-1">
               {inquiries.length > 0 ? (
                 inquiries.map((inquiry) => {
                   const isSelected = inquiry.id === selectedInquiryId;
@@ -261,6 +264,7 @@ const HomePageClient: React.FC<HomePageClientProps> = ({ aiMode }) => {
                 : 'border-slate-200'
             }`}
           >
+            <p className="text-sm text-gray-700">{chatUiText.assessmentNotice}</p>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-bold text-gray-950">{chatUiText.harassmentCardTitle}</h2>
               {selectedInquiry ? (

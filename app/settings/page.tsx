@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { getAiModeDisplay, getAppSettings } from '@/lib/appSettings';
+import { getAiModeDisplay } from '@/lib/appSettings';
+import { getAdminSettings } from '@/lib/adminData';
 import { settingsUiText } from '@/lib/chatUiText';
 
 export const dynamic = 'force-dynamic';
 
-const SettingsPage = () => {
-  const settings = getAppSettings();
+const SettingsPage = async () => {
+  const settings = await getAdminSettings();
   const aiMode = getAiModeDisplay();
   const rows = [
     [settingsUiText.aiProviderLabel, settings.aiProvider],
